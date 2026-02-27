@@ -1,0 +1,21 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Fitliyo.Application.Contracts/Fitliyo.Application.Contracts.csproj" />
+    <Project Path="src/Fitliyo.Application/Fitliyo.Application.csproj" />
+    <Project Path="src/Fitliyo.DbMigrator/Fitliyo.DbMigrator.csproj" />
+    <Project Path="src/Fitliyo.Domain.Shared/Fitliyo.Domain.Shared.csproj" />
+    <Project Path="src/Fitliyo.Domain/Fitliyo.Domain.csproj" />
+    <Project Path="src/Fitliyo.EntityFrameworkCore/Fitliyo.EntityFrameworkCore.csproj" />
+    <Project Path="src/Fitliyo.HttpApi.Client/Fitliyo.HttpApi.Client.csproj" />
+    <Project Path="src/Fitliyo.HttpApi/Fitliyo.HttpApi.csproj" />
+    <Project Path="src/Fitliyo.Web/Fitliyo.Web.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/Fitliyo.Application.Tests/Fitliyo.Application.Tests.csproj" />
+    <Project Path="test/Fitliyo.Domain.Tests/Fitliyo.Domain.Tests.csproj" />
+    <Project Path="test/Fitliyo.EntityFrameworkCore.Tests/Fitliyo.EntityFrameworkCore.Tests.csproj" />
+    <Project Path="test/Fitliyo.HttpApi.Client.ConsoleTestApp/Fitliyo.HttpApi.Client.ConsoleTestApp.csproj" />
+    <Project Path="test/Fitliyo.TestBase/Fitliyo.TestBase.csproj" />
+    <Project Path="test/Fitliyo.Web.Tests/Fitliyo.Web.Tests.csproj" />
+  </Folder>
+</Solution>
