@@ -1,10 +1,10 @@
-using Riok.Mapperly.Abstractions;
-using Volo.Abp.Mapperly;
+using AutoMapper;
 
 namespace Fitliyo.Web;
 
-[Mapper]
-public partial class FitliyoWebMappers
+public class FitliyoWebAutoMapperProfile : Profile
 {
-    //Define your Mapperly configuration here for the Web project.
+    public FitliyoWebAutoMapperProfile()
+    {
+    }
 }

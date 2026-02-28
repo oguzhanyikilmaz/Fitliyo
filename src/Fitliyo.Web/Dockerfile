@@ -1,15 +1,10 @@
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview AS base
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 WORKDIR /app
 EXPOSE 80
 EXPOSE 443
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0-preview AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
-
-# SSL/NuGet sorunlarını environment ile çöz (apt-get gerektirmez)
-ENV DOTNET_SYSTEM_NET_HTTP_USESOCKETSHTTPHANDLER=0
-ENV DOTNET_NUGET_SIGNATURE_VERIFICATION=false
-ENV NUGET_CERT_REVOCATION_MODE=offline
 
 COPY ["NuGet.Config", "."]
 COPY ["common.props", "."]

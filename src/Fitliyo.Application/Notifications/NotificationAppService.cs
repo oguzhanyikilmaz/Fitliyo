@@ -13,14 +13,11 @@ namespace Fitliyo.Notifications;
 public class NotificationAppService : FitliyoAppService, INotificationAppService
 {
     private readonly IRepository<Notification, Guid> _notificationRepository;
-    private readonly FitliyoApplicationMappers _mapper;
 
     public NotificationAppService(
-        IRepository<Notification, Guid> notificationRepository,
-        FitliyoApplicationMappers mapper)
+        IRepository<Notification, Guid> notificationRepository)
     {
         _notificationRepository = notificationRepository;
-        _mapper = mapper;
     }
 
     [Authorize]
@@ -44,7 +41,7 @@ public class NotificationAppService : FitliyoAppService, INotificationAppService
 
         var entities = await AsyncExecuter.ToListAsync(queryable);
 
-        return new PagedResultDto<NotificationDto>(totalCount, entities.Select(_mapper.NotificationToDto).ToList());
+        return new PagedResultDto<NotificationDto>(totalCount, entities.Select(x => ObjectMapper.Map<Notification, NotificationDto>(x)).ToList());
     }
 
     [Authorize]

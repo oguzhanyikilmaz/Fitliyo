@@ -20,18 +20,15 @@ public class SubscriptionAppService : FitliyoAppService, ISubscriptionAppService
     private readonly IRepository<SubscriptionPlan, Guid> _planRepository;
     private readonly IRepository<TrainerSubscription, Guid> _subscriptionRepository;
     private readonly IRepository<TrainerProfile, Guid> _trainerProfileRepository;
-    private readonly FitliyoApplicationMappers _mapper;
 
     public SubscriptionAppService(
         IRepository<SubscriptionPlan, Guid> planRepository,
         IRepository<TrainerSubscription, Guid> subscriptionRepository,
-        IRepository<TrainerProfile, Guid> trainerProfileRepository,
-        FitliyoApplicationMappers mapper)
+        IRepository<TrainerProfile, Guid> trainerProfileRepository)
     {
         _planRepository = planRepository;
         _subscriptionRepository = subscriptionRepository;
         _trainerProfileRepository = trainerProfileRepository;
-        _mapper = mapper;
     }
 
     [AllowAnonymous]
@@ -39,7 +36,7 @@ public class SubscriptionAppService : FitliyoAppService, ISubscriptionAppService
     {
         var plans = await _planRepository.GetListAsync(x => x.IsActive);
         var sorted = plans.OrderBy(x => x.SortOrder).ThenBy(x => x.Price);
-        return new ListResultDto<SubscriptionPlanDto>(sorted.Select(_mapper.SubscriptionPlanToDto).ToList());
+        return new ListResultDto<SubscriptionPlanDto>(sorted.Select(x => ObjectMapper.Map<SubscriptionPlan, SubscriptionPlanDto>(x)).ToList());
     }
 
     [Authorize(FitliyoPermissions.Admin.Dashboard)]
@@ -60,7 +57,7 @@ public class SubscriptionAppService : FitliyoAppService, ISubscriptionAppService
         await _planRepository.InsertAsync(entity);
         Logger.LogInformation("Abonelik planı oluşturuldu: {PlanId}, {Name}", entity.Id, entity.Name);
 
-        return _mapper.SubscriptionPlanToDto(entity);
+        return ObjectMapper.Map<SubscriptionPlan, SubscriptionPlanDto>(entity);
     }
 
     [Authorize(FitliyoPermissions.Admin.Dashboard)]
@@ -84,7 +81,7 @@ public class SubscriptionAppService : FitliyoAppService, ISubscriptionAppService
         await _planRepository.UpdateAsync(entity);
         Logger.LogInformation("Abonelik planı güncellendi: {PlanId}", id);
 
-        return _mapper.SubscriptionPlanToDto(entity);
+        return ObjectMapper.Map<SubscriptionPlan, SubscriptionPlanDto>(entity);
     }
 
     [Authorize(FitliyoPermissions.Admin.Dashboard)]
@@ -106,7 +103,7 @@ public class SubscriptionAppService : FitliyoAppService, ISubscriptionAppService
         if (subscription == null)
             throw new BusinessException(FitliyoDomainErrorCodes.EntityNotFound);
 
-        return _mapper.TrainerSubscriptionToDto(subscription);
+        return ObjectMapper.Map<TrainerSubscription, TrainerSubscriptionDto>(subscription);
     }
 
     [Authorize]
@@ -141,7 +138,7 @@ public class SubscriptionAppService : FitliyoAppService, ISubscriptionAppService
         Logger.LogInformation("Abonelik oluşturuldu: {SubscriptionId}, Eğitmen: {TrainerProfileId}, Plan: {PlanName}",
             subscription.Id, trainerProfile.Id, plan.Name);
 
-        return _mapper.TrainerSubscriptionToDto(subscription);
+        return ObjectMapper.Map<TrainerSubscription, TrainerSubscriptionDto>(subscription);
     }
 
     [Authorize]

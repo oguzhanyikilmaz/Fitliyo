@@ -10,7 +10,7 @@ using Fitliyo.EntityFrameworkCore;
 using Fitliyo.Localization;
 using Fitliyo.MultiTenancy;
 using Fitliyo.Web.Menus;
-using Microsoft.OpenApi;
+using Microsoft.OpenApi.Models;
 using OpenIddict.Validation.AspNetCore;
 using Volo.Abp;
 using Volo.Abp.Account.Web;
@@ -25,7 +25,7 @@ using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite.Bundling;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
-using Volo.Abp.Mapperly;
+using Volo.Abp.AutoMapper;
 using Volo.Abp.FeatureManagement;
 using Volo.Abp.Identity.Web;
 using Volo.Abp.Localization;
@@ -112,7 +112,10 @@ public class FitliyoWebModule : AbpModule
         ConfigureAutoApiControllers();
         ConfigureSwaggerServices(context.Services);
 
-        context.Services.AddMapperlyObjectMapper<FitliyoWebModule>();
+        Configure<AbpAutoMapperOptions>(options =>
+        {
+            options.AddMaps<FitliyoWebModule>();
+        });
     }
 
     private void ConfigureAuthentication(ServiceConfigurationContext context)

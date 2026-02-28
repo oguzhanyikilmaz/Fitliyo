@@ -15,21 +15,18 @@ namespace Fitliyo.Categories;
 public class CategoryAppService : FitliyoAppService, ICategoryAppService
 {
     private readonly IRepository<Category, Guid> _categoryRepository;
-    private readonly FitliyoApplicationMappers _mapper;
 
     public CategoryAppService(
-        IRepository<Category, Guid> categoryRepository,
-        FitliyoApplicationMappers mapper)
+        IRepository<Category, Guid> categoryRepository)
     {
         _categoryRepository = categoryRepository;
-        _mapper = mapper;
     }
 
     [AllowAnonymous]
     public async Task<CategoryDto> GetAsync(Guid id)
     {
         var entity = await _categoryRepository.GetAsync(id);
-        return _mapper.CategoryToDto(entity);
+        return ObjectMapper.Map<Category, CategoryDto>(entity);
     }
 
     [AllowAnonymous]
@@ -37,7 +34,7 @@ public class CategoryAppService : FitliyoAppService, ICategoryAppService
     {
         var entities = await _categoryRepository.GetListAsync(x => x.IsActive);
         var sorted = entities.OrderBy(x => x.SortOrder).ThenBy(x => x.Name);
-        var dtos = sorted.Select(_mapper.CategoryToDto).ToList();
+        var dtos = sorted.Select(x => ObjectMapper.Map<Category, CategoryDto>(x)).ToList();
         return new ListResultDto<CategoryDto>(dtos);
     }
 
@@ -47,7 +44,7 @@ public class CategoryAppService : FitliyoAppService, ICategoryAppService
         var entities = await _categoryRepository.GetListAsync(x => x.ParentId == parentId && x.IsActive);
         return entities.OrderBy(x => x.SortOrder)
                        .ThenBy(x => x.Name)
-                       .Select(_mapper.CategoryToDto)
+                       .Select(x => ObjectMapper.Map<Category, CategoryDto>(x))
                        .ToList();
     }
 
@@ -69,7 +66,7 @@ public class CategoryAppService : FitliyoAppService, ICategoryAppService
         await _categoryRepository.InsertAsync(entity);
         Logger.LogInformation("Kategori oluşturuldu: {CategoryId}, {Name}", entity.Id, entity.Name);
 
-        return _mapper.CategoryToDto(entity);
+        return ObjectMapper.Map<Category, CategoryDto>(entity);
     }
 
     [Authorize(FitliyoPermissions.Categories.Edit)]
@@ -96,7 +93,7 @@ public class CategoryAppService : FitliyoAppService, ICategoryAppService
         await _categoryRepository.UpdateAsync(entity);
         Logger.LogInformation("Kategori güncellendi: {CategoryId}", entity.Id);
 
-        return _mapper.CategoryToDto(entity);
+        return ObjectMapper.Map<Category, CategoryDto>(entity);
     }
 
     [Authorize(FitliyoPermissions.Categories.Delete)]

@@ -3,7 +3,7 @@
   <Import Project="..\..\common.props" />
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <RootNamespace>Fitliyo</RootNamespace>
   </PropertyGroup>
@@ -11,7 +11,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Fitliyo.EntityFrameworkCore\Fitliyo.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\Fitliyo.Application.Tests\Fitliyo.Application.Tests.csproj" />
-    <PackageReference Include="Volo.Abp.EntityFrameworkCore.Sqlite" Version="10.1.0" />
+    <PackageReference Include="Volo.Abp.EntityFrameworkCore.Sqlite" Version="9.3.7" />
   </ItemGroup>
 
   <ItemGroup>

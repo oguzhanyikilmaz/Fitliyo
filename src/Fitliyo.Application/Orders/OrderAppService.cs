@@ -23,20 +23,17 @@ public class OrderAppService : FitliyoAppService, IOrderAppService
     private readonly IRepository<Session, Guid> _sessionRepository;
     private readonly IRepository<ServicePackage, Guid> _packageRepository;
     private readonly IRepository<TrainerProfile, Guid> _trainerProfileRepository;
-    private readonly FitliyoApplicationMappers _mapper;
 
     public OrderAppService(
         IRepository<Order, Guid> orderRepository,
         IRepository<Session, Guid> sessionRepository,
         IRepository<ServicePackage, Guid> packageRepository,
-        IRepository<TrainerProfile, Guid> trainerProfileRepository,
-        FitliyoApplicationMappers mapper)
+        IRepository<TrainerProfile, Guid> trainerProfileRepository)
     {
         _orderRepository = orderRepository;
         _sessionRepository = sessionRepository;
         _packageRepository = packageRepository;
         _trainerProfileRepository = trainerProfileRepository;
-        _mapper = mapper;
     }
 
     [Authorize]
@@ -54,7 +51,7 @@ public class OrderAppService : FitliyoAppService, IOrderAppService
             }
         }
 
-        return _mapper.OrderToDto(order);
+        return ObjectMapper.Map<Order, OrderDto>(order);
     }
 
     [Authorize]
@@ -80,7 +77,7 @@ public class OrderAppService : FitliyoAppService, IOrderAppService
         queryable = queryable.PageBy(input);
         var entities = await AsyncExecuter.ToListAsync(queryable);
 
-        return new PagedResultDto<OrderDto>(totalCount, entities.Select(_mapper.OrderToDto).ToList());
+        return new PagedResultDto<OrderDto>(totalCount, entities.Select(x => ObjectMapper.Map<Order, OrderDto>(x)).ToList());
     }
 
     [Authorize]
@@ -106,7 +103,7 @@ public class OrderAppService : FitliyoAppService, IOrderAppService
         queryable = queryable.PageBy(input);
         var entities = await AsyncExecuter.ToListAsync(queryable);
 
-        return new PagedResultDto<OrderDto>(totalCount, entities.Select(_mapper.OrderToDto).ToList());
+        return new PagedResultDto<OrderDto>(totalCount, entities.Select(x => ObjectMapper.Map<Order, OrderDto>(x)).ToList());
     }
 
     [Authorize]
@@ -136,7 +133,7 @@ public class OrderAppService : FitliyoAppService, IOrderAppService
         await _orderRepository.InsertAsync(order);
         Logger.LogInformation("Sipariş oluşturuldu: {OrderId}, {OrderNumber}, Öğrenci: {StudentId}", order.Id, orderNumber, userId);
 
-        return _mapper.OrderToDto(order);
+        return ObjectMapper.Map<Order, OrderDto>(order);
     }
 
     [Authorize]
@@ -159,7 +156,7 @@ public class OrderAppService : FitliyoAppService, IOrderAppService
         await _orderRepository.UpdateAsync(order);
         Logger.LogInformation("Sipariş iptal edildi: {OrderId}, Sebep: {Reason}", id, reason);
 
-        return _mapper.OrderToDto(order);
+        return ObjectMapper.Map<Order, OrderDto>(order);
     }
 
     [Authorize]
@@ -180,7 +177,7 @@ public class OrderAppService : FitliyoAppService, IOrderAppService
 
         Logger.LogInformation("Sipariş tamamlandı: {OrderId}", id);
 
-        return _mapper.OrderToDto(order);
+        return ObjectMapper.Map<Order, OrderDto>(order);
     }
 
     [Authorize]
@@ -199,7 +196,7 @@ public class OrderAppService : FitliyoAppService, IOrderAppService
         var sessions = await _sessionRepository.GetListAsync(x => x.OrderId == orderId);
         var sorted = sessions.OrderBy(x => x.SequenceNumber).ToList();
 
-        return new PagedResultDto<SessionDto>(sorted.Count, sorted.Select(_mapper.SessionToDto).ToList());
+        return new PagedResultDto<SessionDto>(sorted.Count, sorted.Select(x => ObjectMapper.Map<Session, SessionDto>(x)).ToList());
     }
 
     private static string GenerateOrderNumber()

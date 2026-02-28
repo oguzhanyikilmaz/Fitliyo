@@ -19,25 +19,22 @@ public class TrainerProfileAppService : FitliyoAppService, ITrainerProfileAppSer
     private readonly IRepository<TrainerProfile, Guid> _trainerProfileRepository;
     private readonly IRepository<TrainerCertificate, Guid> _certificateRepository;
     private readonly IRepository<TrainerGallery, Guid> _galleryRepository;
-    private readonly FitliyoApplicationMappers _mapper;
 
     public TrainerProfileAppService(
         IRepository<TrainerProfile, Guid> trainerProfileRepository,
         IRepository<TrainerCertificate, Guid> certificateRepository,
-        IRepository<TrainerGallery, Guid> galleryRepository,
-        FitliyoApplicationMappers mapper)
+        IRepository<TrainerGallery, Guid> galleryRepository)
     {
         _trainerProfileRepository = trainerProfileRepository;
         _certificateRepository = certificateRepository;
         _galleryRepository = galleryRepository;
-        _mapper = mapper;
     }
 
     [AllowAnonymous]
     public async Task<TrainerProfileDto> GetAsync(Guid id)
     {
         var entity = await _trainerProfileRepository.GetAsync(id);
-        return _mapper.TrainerProfileToDto(entity);
+        return ObjectMapper.Map<TrainerProfile, TrainerProfileDto>(entity);
     }
 
     [AllowAnonymous]
@@ -48,7 +45,7 @@ public class TrainerProfileAppService : FitliyoAppService, ITrainerProfileAppSer
         {
             throw new BusinessException(FitliyoDomainErrorCodes.TrainerProfileNotFound);
         }
-        return _mapper.TrainerProfileToDto(entity);
+        return ObjectMapper.Map<TrainerProfile, TrainerProfileDto>(entity);
     }
 
     [AllowAnonymous]
@@ -106,7 +103,7 @@ public class TrainerProfileAppService : FitliyoAppService, ITrainerProfileAppSer
         queryable = queryable.PageBy(input);
 
         var entities = await AsyncExecuter.ToListAsync(queryable);
-        var dtos = entities.Select(_mapper.TrainerProfileToDto).ToList();
+        var dtos = entities.Select(x => ObjectMapper.Map<TrainerProfile, TrainerProfileDto>(x)).ToList();
 
         return new PagedResultDto<TrainerProfileDto>(totalCount, dtos);
     }
@@ -134,7 +131,7 @@ public class TrainerProfileAppService : FitliyoAppService, ITrainerProfileAppSer
         await _trainerProfileRepository.InsertAsync(entity);
         Logger.LogInformation("Eğitmen profili oluşturuldu: {TrainerProfileId}, {UserId}", entity.Id, userId);
 
-        return _mapper.TrainerProfileToDto(entity);
+        return ObjectMapper.Map<TrainerProfile, TrainerProfileDto>(entity);
     }
 
     [Authorize(FitliyoPermissions.Trainers.Edit)]
@@ -158,7 +155,7 @@ public class TrainerProfileAppService : FitliyoAppService, ITrainerProfileAppSer
         await _trainerProfileRepository.UpdateAsync(entity);
         Logger.LogInformation("Eğitmen profili güncellendi: {TrainerProfileId}", entity.Id);
 
-        return _mapper.TrainerProfileToDto(entity);
+        return ObjectMapper.Map<TrainerProfile, TrainerProfileDto>(entity);
     }
 
     [Authorize(FitliyoPermissions.Trainers.Delete)]
@@ -180,7 +177,7 @@ public class TrainerProfileAppService : FitliyoAppService, ITrainerProfileAppSer
         {
             throw new BusinessException(FitliyoDomainErrorCodes.TrainerProfileNotFound);
         }
-        return _mapper.TrainerProfileToDto(entity);
+        return ObjectMapper.Map<TrainerProfile, TrainerProfileDto>(entity);
     }
 
     private async Task CheckOwnershipAsync(TrainerProfile entity)

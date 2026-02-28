@@ -1,10 +1,5 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0-preview AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
-
-# SSL/NuGet sorunlarını environment ile çöz (apt-get gerektirmez)
-ENV DOTNET_SYSTEM_NET_HTTP_USESOCKETSHTTPHANDLER=0
-ENV DOTNET_NUGET_SIGNATURE_VERIFICATION=false
-ENV NUGET_CERT_REVOCATION_MODE=offline
 
 COPY ["NuGet.Config", "."]
 COPY ["common.props", "."]
@@ -25,7 +20,7 @@ RUN dotnet publish "src/Fitliyo.DbMigrator/Fitliyo.DbMigrator.csproj" \
     -o /app/publish \
     --no-restore
 
-FROM mcr.microsoft.com/dotnet/runtime:10.0-preview AS final
+FROM mcr.microsoft.com/dotnet/runtime:9.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "Fitliyo.DbMigrator.dll"]

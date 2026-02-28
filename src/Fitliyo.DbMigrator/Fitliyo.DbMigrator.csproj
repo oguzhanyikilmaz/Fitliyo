@@ -4,7 +4,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
@@ -26,11 +26,11 @@
     <PackageReference Include="Serilog.Sinks.Async" Version="2.1.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.5" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Volo.Abp.Autofac" Version="10.1.0" />
+    <PackageReference Include="Volo.Abp.Autofac" Version="9.3.7" />
     <ProjectReference Include="..\Fitliyo.Application.Contracts\Fitliyo.Application.Contracts.csproj" />
     <ProjectReference Include="..\Fitliyo.EntityFrameworkCore\Fitliyo.EntityFrameworkCore.csproj" />
   </ItemGroup>

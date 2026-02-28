@@ -22,25 +22,22 @@ public class ReviewAppService : FitliyoAppService, IReviewAppService
     private readonly IRepository<Review, Guid> _reviewRepository;
     private readonly IRepository<Order, Guid> _orderRepository;
     private readonly IRepository<TrainerProfile, Guid> _trainerProfileRepository;
-    private readonly FitliyoApplicationMappers _mapper;
 
     public ReviewAppService(
         IRepository<Review, Guid> reviewRepository,
         IRepository<Order, Guid> orderRepository,
-        IRepository<TrainerProfile, Guid> trainerProfileRepository,
-        FitliyoApplicationMappers mapper)
+        IRepository<TrainerProfile, Guid> trainerProfileRepository)
     {
         _reviewRepository = reviewRepository;
         _orderRepository = orderRepository;
         _trainerProfileRepository = trainerProfileRepository;
-        _mapper = mapper;
     }
 
     [AllowAnonymous]
     public async Task<ReviewDto> GetAsync(Guid id)
     {
         var review = await _reviewRepository.GetAsync(id);
-        return _mapper.ReviewToDto(review);
+        return ObjectMapper.Map<Review, ReviewDto>(review);
     }
 
     [AllowAnonymous]
@@ -65,7 +62,7 @@ public class ReviewAppService : FitliyoAppService, IReviewAppService
         queryable = queryable.PageBy(input);
         var entities = await AsyncExecuter.ToListAsync(queryable);
 
-        return new PagedResultDto<ReviewDto>(totalCount, entities.Select(_mapper.ReviewToDto).ToList());
+        return new PagedResultDto<ReviewDto>(totalCount, entities.Select(x => ObjectMapper.Map<Review, ReviewDto>(x)).ToList());
     }
 
     [Authorize]
@@ -100,7 +97,7 @@ public class ReviewAppService : FitliyoAppService, IReviewAppService
 
         Logger.LogInformation("Değerlendirme oluşturuldu: {ReviewId}, Sipariş: {OrderId}, Puan: {Rating}", review.Id, order.Id, input.Rating);
 
-        return _mapper.ReviewToDto(review);
+        return ObjectMapper.Map<Review, ReviewDto>(review);
     }
 
     [Authorize]
@@ -118,7 +115,7 @@ public class ReviewAppService : FitliyoAppService, IReviewAppService
 
         Logger.LogInformation("Değerlendirme yanıtlandı: {ReviewId}", id);
 
-        return _mapper.ReviewToDto(review);
+        return ObjectMapper.Map<Review, ReviewDto>(review);
     }
 
     [Authorize(FitliyoPermissions.Admin.Dashboard)]

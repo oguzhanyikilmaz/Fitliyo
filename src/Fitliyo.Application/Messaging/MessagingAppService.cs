@@ -16,16 +16,13 @@ public class MessagingAppService : FitliyoAppService, IMessagingAppService
 {
     private readonly IRepository<Conversation, Guid> _conversationRepository;
     private readonly IRepository<Message, Guid> _messageRepository;
-    private readonly FitliyoApplicationMappers _mapper;
 
     public MessagingAppService(
         IRepository<Conversation, Guid> conversationRepository,
-        IRepository<Message, Guid> messageRepository,
-        FitliyoApplicationMappers mapper)
+        IRepository<Message, Guid> messageRepository)
     {
         _conversationRepository = conversationRepository;
         _messageRepository = messageRepository;
-        _mapper = mapper;
     }
 
     [Authorize]
@@ -36,7 +33,7 @@ public class MessagingAppService : FitliyoAppService, IMessagingAppService
             x => (x.InitiatorId == userId || x.ParticipantId == userId) && x.IsActive);
 
         var sorted = conversations.OrderByDescending(x => x.LastMessageAt).ToList();
-        var dtos = sorted.Select(_mapper.ConversationToDto).ToList();
+        var dtos = sorted.Select(x => ObjectMapper.Map<Conversation, ConversationDto>(x)).ToList();
 
         return new ListResultDto<ConversationDto>(dtos);
     }
@@ -62,7 +59,7 @@ public class MessagingAppService : FitliyoAppService, IMessagingAppService
 
         var dtos = entities.Select(m =>
         {
-            var dto = _mapper.MessageToDto(m);
+            var dto = ObjectMapper.Map<Message, MessageDto>(m);
             dto.IsMine = m.SenderId == userId;
             return dto;
         }).ToList();
@@ -90,7 +87,7 @@ public class MessagingAppService : FitliyoAppService, IMessagingAppService
 
         Logger.LogInformation("Mesaj gönderildi: {ConversationId}, Gönderen: {SenderId}", conversation.Id, userId);
 
-        var dto = _mapper.MessageToDto(message);
+        var dto = ObjectMapper.Map<Message, MessageDto>(message);
         dto.IsMine = true;
         return dto;
     }
