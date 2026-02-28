@@ -4,25 +4,9 @@ EXPOSE 80
 EXPOSE 443
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
-WORKDIR /src
-
-COPY ["NuGet.Config", "."]
-COPY ["common.props", "."]
-COPY ["Fitliyo.slnx", "."]
-
-COPY ["src/Fitliyo.Domain.Shared/Fitliyo.Domain.Shared.csproj", "src/Fitliyo.Domain.Shared/"]
-COPY ["src/Fitliyo.Domain/Fitliyo.Domain.csproj", "src/Fitliyo.Domain/"]
-COPY ["src/Fitliyo.Application.Contracts/Fitliyo.Application.Contracts.csproj", "src/Fitliyo.Application.Contracts/"]
-COPY ["src/Fitliyo.Application/Fitliyo.Application.csproj", "src/Fitliyo.Application/"]
-COPY ["src/Fitliyo.EntityFrameworkCore/Fitliyo.EntityFrameworkCore.csproj", "src/Fitliyo.EntityFrameworkCore/"]
-COPY ["src/Fitliyo.HttpApi/Fitliyo.HttpApi.csproj", "src/Fitliyo.HttpApi/"]
-COPY ["src/Fitliyo.HttpApi.Client/Fitliyo.HttpApi.Client.csproj", "src/Fitliyo.HttpApi.Client/"]
-COPY ["src/Fitliyo.Web/Fitliyo.Web.csproj", "src/Fitliyo.Web/"]
-
-RUN dotnet restore "src/Fitliyo.Web/Fitliyo.Web.csproj"
-
-COPY ["src/", "src/"]
-RUN dotnet publish "src/Fitliyo.Web/Fitliyo.Web.csproj" \
+WORKDIR /build
+COPY . .
+RUN dotnet publish src/Fitliyo.Web/Fitliyo.Web.csproj \
     -c Release \
     -o /app/publish
 

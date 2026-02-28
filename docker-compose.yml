@@ -1,5 +1,3 @@
-version: "3.8"
-
 # ─── Fitliyo — İzole Network ile Çalışır ────────────────────
 # Mevcut container'lar: nginx-proxy-manager(:80,:81,:443),
 # abmistanbul-web(:3000), invnweb(:4000), thinkamore_web(:5000),
