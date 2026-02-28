@@ -1,6 +1,11 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0-preview AS build
 WORKDIR /src
 
+# SSL sertifika sorununu çöz
+RUN apt-get update && apt-get install -y ca-certificates && update-ca-certificates
+ENV DOTNET_SYSTEM_NET_HTTP_USESOCKETSHTTPHANDLER=0
+ENV DOTNET_NUGET_SIGNATURE_VERIFICATION=false
+
 COPY ["NuGet.Config", "."]
 COPY ["common.props", "."]
 COPY ["Fitliyo.slnx", "."]
