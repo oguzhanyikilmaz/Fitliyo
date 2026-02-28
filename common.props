@@ -6,18 +6,18 @@
     <AbpProjectType>app</AbpProjectType>
   </PropertyGroup>
 
-  <ItemGroup>
-    <EmbeddedResource Remove="**/*.resx" />
-  </ItemGroup>
-
   <Target Name="NoWarnOnRazorViewImportedTypeConflicts" BeforeTargets="RazorCoreCompile">
     <PropertyGroup>
       <NoWarn>$(NoWarn);0436</NoWarn>
     </PropertyGroup>
   </Target>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
     <Content Remove="$(UserProfile)\.nuget\packages\*\*\contentFiles\any\*\*.abppkg*" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
+    <Content Remove="$(HOME)/.nuget/packages/**/contentFiles/any/**/*.abppkg*" />
   </ItemGroup>
 
 </Project>

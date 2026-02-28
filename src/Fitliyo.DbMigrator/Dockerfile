@@ -17,8 +17,7 @@ RUN dotnet restore "src/Fitliyo.DbMigrator/Fitliyo.DbMigrator.csproj"
 COPY ["src/", "src/"]
 RUN dotnet publish "src/Fitliyo.DbMigrator/Fitliyo.DbMigrator.csproj" \
     -c Release \
-    -o /app/publish \
-    --no-restore
+    -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/runtime:9.0 AS final
 WORKDIR /app

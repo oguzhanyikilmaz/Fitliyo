@@ -24,8 +24,7 @@ RUN dotnet restore "src/Fitliyo.Web/Fitliyo.Web.csproj"
 COPY ["src/", "src/"]
 RUN dotnet publish "src/Fitliyo.Web/Fitliyo.Web.csproj" \
     -c Release \
-    -o /app/publish \
-    --no-restore
+    -o /app/publish
 
 FROM base AS final
 WORKDIR /app
