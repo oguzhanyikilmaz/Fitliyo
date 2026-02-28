@@ -1,0 +1,119 @@
+---
+description: "Entity/DTO/AppService otomatik üretim kuralları"
+globs:
+  - "src/Fitliyo.Domain/**/*.cs"
+  - "src/Fitliyo.Application/**/*.cs"
+  - "src/Fitliyo.Application.Contracts/**/*.cs"
+alwaysApply: true
+---
+
+# Fitliyo - Otomatik Kod Üretim Kuralları (Çekirdek)
+
+## 0) Birebir Sözleşme Kuralı (UI için kritik)
+
+- API sözleşmesi (endpoint/request/response/model) **tahmin edilmez**.
+- Tek doğruluk kaynağı: `docs/openapi/swagger.web.v1.full.json`
+
+Zorunlu akış:
+
+- Swagger snapshot üret:
+
+```bash
+dotnet run --project src/Fitliyo.Web -- --generate-swagger docs/openapi/swagger.web.v1.full.json
+```
+
+- AppService dokümanlarını üret:
+
+```bash
+python3 scripts/generate_appservice_docs.py
+```
+
+> `docs/app-services/*.md` generator çıktısıdır; manuel edit gerekiyorsa önce generator güncellenir.
+
+## 1) Entity Kuralları (Pattern)
+
+- **`FullAuditedAggregateRoot<Guid>`** base class (soft delete + audit otomatik).
+- **EF Core**: `protected` boş constructor bulunur.
+- **Constructor**: gerekli alanlar constructor'da set edilir.
+- **XML yorum**: public entity ve kritik property'ler için Türkçe XML `<summary>` yazılır.
+- **Slug alanları**: Profil/paket gibi public entity'lerde `Slug` alanı unique olmalı.
+- **Sahiplik FK'ları**: Entity'nin sahibi net olmalı (TrainerProfileId, StudentUserId, UserId vb.).
+
+### Marketplace Entity Sahiplik Kuralları
+
+| Entity Grubu | Sahiplik FK | Açıklama |
+|-------------|------------|----------|
+| Trainer entity'leri | `TrainerProfileId` | TrainerCertificate, TrainerGallery, ServicePackage |
+| Student entity'leri | `StudentUserId` (→ AppUser) | Order (StudentUserId) |
+| İlişkisel entity'ler | Birden fazla FK | Order, Session, Review, Conversation |
+| Platform entity'leri | Sahiplik yok | Category, SubscriptionPlan, BlogPost |
+| User entity'leri | `UserId` (→ AppUser) | Notification, UserSubscription |
+
+## 2) DTO Kuralları
+
+- DTO'lar `XxxDto`, input DTO'lar `CreateUpdateXxxDto` formatında isimlendirilir.
+- Input DTO'larda **validation** (örn. `[Required]`, `[StringLength]`, `[Range]`) bulunur.
+- Public-facing DTO'larda hassas veri (BankAccountInfo, IBAN) expose edilmez.
+- XML `<summary>` Türkçe yazılır.
+
+## 3) AppService Kuralları (ABP)
+
+- **Permission**: policy/permission içeren `[Authorize(FitliyoPermissions.XXX)]` **method-level** uygulanır.
+  - **Kural**: class-level policy/permission `[Authorize(FitliyoPermissions....)]` **kullanma**.
+  - İstisna: sadece "authenticated olmalı" anlamında **policysiz** `[Authorize]` class-level olabilir.
+- **Guest erişimi**: Arama, profil görüntüleme gibi public endpoint'ler `[AllowAnonymous]` ile işaretlenir.
+- **Trainer kendi verisi**: Eğitmenin kendi profil/paket/takvim endpoint'lerinde ownership kontrolü yapılır.
+- **Cache-first**: okuma operasyonlarında önce cache kontrol edilir.
+- **Cache invalidation**: create/update/delete sonrası ilgili cache'ler güncellenir/temizlenir.
+- **Logging**: structured logging (hassas veri loglanmaz).
+- **Error handling**: `BusinessException` / `UserFriendlyException` standardı uygulanır.
+
+### Ownership Kontrolü (Marketplace Deseni)
+
+```csharp
+[Authorize]
+public async Task<ServicePackageDto> UpdateAsync(Guid id, CreateUpdateServicePackageDto input)
+{
+    var package = await _repository.GetAsync(id);
+    var trainerProfile = await _trainerProfileRepository.FindAsync(x => x.UserId == CurrentUser.GetId());
+
+    if (trainerProfile == null || package.TrainerProfileId != trainerProfile.Id)
+        throw new AbpAuthorizationException("Bu paketi düzenleme yetkiniz yok.");
+
+    // güncelleme işlemi...
+}
+```
+
+### Guest Endpoint Deseni
+
+```csharp
+[AllowAnonymous]
+public async Task<TrainerProfileDto> GetBySlugAsync(string slug)
+{
+    var profile = await _trainerProfileRepository.FindAsync(x => x.Slug == slug && x.IsActive);
+    if (profile == null)
+        throw new BusinessException(FitliyoDomainErrorCodes.TrainerNotFound);
+
+    return ObjectMapper.Map<TrainerProfile, TrainerProfileDto>(profile);
+}
+```
+
+Referanslar:
+- `docs/standards/ERROR_HANDLING.md`
+- `docs/AUTHORIZATION-SYSTEM.md`
+- `docs/infrastructure/REDIS_CACHE_IMPLEMENTATION.md`
+
+## 4) Dokümantasyon Kuralı (AppService)
+
+- AppService dokümanlarının endpoint/request/response/model bölümleri **yalnızca** swagger snapshot'tan gelir.
+- Detay: `docs/standards/DOCUMENTATION_WORKFLOW.md`
+
+## 5) Yetkilendirme Dokümantasyonu Kuralı (ZORUNLU)
+
+**HER** AppService dokümanında **Yetkilendirme Matrisi** (Bölüm 1.1) **zorunlu** olarak bulunmalıdır.
+
+Matris formatı, zorunlu kurallar ve frontend planı gereksinimleri → bkz. [documentation-rules.mdc §8](documentation-rules.mdc)
+
+Referanslar:
+- [`docs/AUTHORIZATION-SYSTEM.md`](../../docs/AUTHORIZATION-SYSTEM.md)
+- [documentation-rules.mdc — Bölüm 8](documentation-rules.mdc)

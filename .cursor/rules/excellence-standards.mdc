@@ -1,0 +1,42 @@
+---
+description: "Varsayılan mükemmellik davranışı — doğruluk, güvenlik, performans"
+globs:
+alwaysApply: true
+---
+
+# Varsayılan Mükemmellik Davranışı
+
+**Her implementasyon şunları sağlamalı:**
+- Doğru ve güvenli çalışan kod (sadece "çalışıyor" yetmez, "doğru çalışıyor" olmalı)
+- Mevcut sistemi bozmayan, geriye uyumlu değişiklikler
+- Performanslı ve ölçeklenebilir çözümler
+- Test edilebilir ve bakımı kolay yapı
+- Test yazılmadan kod tamamlanmış sayılmaz
+
+**Düşün**: "Bu sadece çalışıyor mu, yoksa production-ready mi?"
+
+## Temel İlkeler
+
+**Asla**:
+- Mevcut çalışan kodu bozma
+- API sözleşmesini tahmin etme → bkz. [auto-generation.mdc](auto-generation.mdc)
+- Aşırı karmaşıklaştırma (KISS prensibi)
+- Kullanıcının promptunu aşma; bu sadece varsayılan kalite çıtası
+- Placeholder/TODO bırakma — her değişiklik tam ve çalışır durumda olmalı
+
+## Uygulama Tamlığı
+
+- Kod yazarken her zaman tam implementasyon yap
+- `// TODO:`, `// FIXME:`, `// HACK:` bırakmak yerine hemen çöz
+- Exception handling, cache invalidation, logging eksik bırakma
+
+**Görev tamamlama kontrol listesi** → bkz. [code-quality.mdc](code-quality.mdc) §Görev Tamamlama
+
+## Diğer Kurallar (Referans)
+
+| Kural | Canonical Dosya |
+|-------|----------------|
+| Boy Scout Rule | [code-review.mdc](code-review.mdc) §KAPSAM |
+| Proaktif bug fix | [workflow-execution.mdc](workflow-execution.mdc) |
+| Git güvenlik (geri alma yasak) | [pr-git-conventions.mdc](pr-git-conventions.mdc), [workflow-execution.mdc](workflow-execution.mdc) |
+| P9/P11 performans | [security-performance.mdc](security-performance.mdc) |

@@ -1,0 +1,134 @@
+---
+description: "Her commit'te otomatik doküman güncelleme kuralı — ZORUNLU"
+globs:
+alwaysApply: true
+---
+
+# Otomatik Doküman Güncelleme (Her Commit'te ZORUNLU)
+
+## Temel Kural
+
+**Kod değişikliği yapıldığında commit ÖNCE şu dokümanlar kontrol edilmeli ve gerekiyorsa güncellenmelidir.** Bu kural commit'e hazırlanırken AI tarafından otomatik uygulanır.
+
+## Commit Öncesi Doküman Kontrol Akışı
+
+```
+Kod değişikliği yapıldı
+    │
+    ├─→ 1. CHANGELOG.md güncellenmeli mi?
+    │      Her anlamlı değişiklikte → EVET
+    │
+    ├─→ 2. Next.js frontend etkileniyor mu?
+    │      API endpoint/DTO/SignalR/Response format değişti mi? (MVC değişiklikleri sayılmaz!)
+    │      EVET → docs/frontend-changes/YYYY-MM-DD-N.md oluştur + README.md index güncelle
+    │
+    ├─→ 3. AppService dokümanları güncel mi?
+    │      AppService kodu değiştiyse → python3 scripts/generate_appservice_docs.py çalıştır
+    │
+    ├─→ 4. Swagger güncel mi?
+    │      API sözleşmesi değiştiyse → swagger snapshot üret
+    │
+    ├─→ 5. Kırık link var mı?
+    │      python3 scripts/validate_docs_links.py çalıştır
+    │
+    └─→ 6. README.md (proje kökü) güncel mi?
+           Proje yapısı, teknoloji stack, komutlar, proje/modül sayısı değiştiyse → güncelle
+```
+
+## 1) CHANGELOG Güncelleme (HER COMMIT)
+
+**Her anlamlı kod değişikliğinde** `docs/CHANGELOG.md` dosyasının en üstüne (başlıktan sonra) yeni giriş eklenir.
+
+> **Arşivleme:** Aktif ay `docs/CHANGELOG.md`'de, eski aylar `docs/changelog/YYYY-MM.md`'de tutulur. Her ay sonunda: `python3 scripts/archive_changelog.py`
+
+**Format:**
+```markdown
+## YYYY-MM-DD - Kısa Başlık
+
+### Değişiklik açıklaması
+- Ne değişti (özet)
+- Detaylar: [İlgili Doküman](link)
+```
+
+**Ne zaman GEREKMİYOR:** Sadece typo düzeltme, yorum ekleme gibi önemsiz değişiklikler.
+
+## 2) Frontend (Next.js) Değişiklik Takibi (API DEĞİŞTİĞİNDE)
+
+Next.js frontend'ini etkileyen API/DTO/SignalR değişikliği varsa `docs/frontend-changes/YYYY-MM-DD-N.md` oluşturulur.
+
+**Kapsam, format, adımlar ve badge'ler:** → bkz. [frontend-change-tracking.mdc](frontend-change-tracking.mdc)
+
+## 3) AppService Dokümanları (APPSERVICE DEĞİŞTİĞİNDE — ZORUNLU)
+
+**`src/Fitliyo.Application/**/*AppService.cs` değiştiğinde doküman yenileme ZORUNLUDUR.**
+
+```bash
+python3 scripts/generate_appservice_docs.py
+```
+
+Bu komut `docs/app-services/*.md` dosyalarını yeniden üretir.
+
+- **AI talimatı:** AppService dosyası düzenlendiğinde (commit öncesi veya düzenleme bitiminde) bu script **otomatik çalıştırılmalı**, sadece önerilmemeli.
+
+## 4) Swagger Snapshot (API DEĞİŞTİĞİNDE)
+
+Endpoint/DTO/route değiştiyse:
+
+```bash
+dotnet run --project src/Fitliyo.Web -- --generate-swagger docs/openapi/swagger.web.v1.full.json
+```
+
+## 5) Link Doğrulama (HER COMMIT)
+
+Commit öncesi kırık linkleri kontrol et:
+
+```bash
+python3 scripts/validate_docs_links.py
+```
+
+## Pre-commit Hook
+
+Tüm kontroller otomatik çalışır:
+
+```bash
+bash scripts/pre-commit-docs-check.sh
+```
+
+Bu script şunları kontrol eder:
+- Kaynak kod değiştiyse CHANGELOG güncellenmiş mi?
+- **AppService (*AppService.cs) değiştiyse `docs/app-services/` güncellenmiş mi?**
+- API/DTO/SignalR değiştiyse ve Next.js frontend'ini etkiliyorsa frontend-changes girişi eklenmiş mi? (MVC-only değişiklikler hariç)
+- Permission değiştiyse yetkilendirme matrisi güncel mi?
+- Kırık link var mı?
+
+## AI İçin Talimat
+
+**Commit oluşturma isteği geldiğinde şu adımları otomatik uygula:**
+
+1. Staged dosyaları analiz et
+2. `src/` altında değişiklik varsa → CHANGELOG'a giriş ekle
+3. **AppService değiştiyse → `generate_appservice_docs.py` ZORUNLU çalıştır** (öner değil, çalıştır)
+4. Next.js frontend etkisi varsa → `docs/frontend-changes/YYYY-MM-DD-N.md` oluştur (MVC değişiklikleri hariç!)
+5. API sözleşmesi değiştiyse → swagger üretmeyi öner (veya gerekirse çalıştır)
+6. `validate_docs_links.py` çalıştırıp kırık link varsa düzelt
+7. Proje yapısı/stack/komutlar değiştiyse → `README.md` (proje kökü) güncelle
+8. `pre-commit-docs-check.sh` çalıştırıp sonucu göster
+
+**Düzenleme sonrası (AppService dosyasına dokunulduğunda):**
+- Değişiklik tamamlanır tamamlanmaz `generate_appservice_docs.py` çalıştırılmalı; doküman güncel tutulmalıdır.
+
+## 6) Endpoint Değişiklik Kontrolü (APPSERVICE DEĞİŞTİĞİNDE — ZORUNLU)
+
+**Her endpoint (AppService metodu) yazıldığında, değiştirildiğinde veya silindiğinde ek kontroller:**
+
+1. **Test Dokümantasyonunu Kontrol Et:** `docs/tests/<Modül>.md` → kapsam tablosu ve TC senaryoları güncel mi?
+2. **Test Dosyalarını Kontrol Et:** `test/Fitliyo.Application.Tests/<Modül>/<XxxAppService>_Tests.cs` → her yeni/değişen metot için test var mı?
+3. **Eksikleri Gider:** Test/doku eksikse yaz, referans path eksikse `python3 scripts/add_test_refs_to_appservice_docs.py` çalıştır
+
+| Değişiklik | AppService Doc | Test Doc | Test Kodu | CHANGELOG |
+|------------|---------------|----------|-----------|-----------|
+| Yeni metot | ✅ Güncelle | ✅ TC ekle | ✅ Test yaz | ✅ Ekle |
+| Metot değişti | ✅ Güncelle | ✅ TC güncelle | ✅ Test güncelle | ✅ Ekle |
+| Metot silindi | ✅ Güncelle | ✅ TC kaldır | ✅ Test kaldır | ✅ Ekle |
+
+**Referans path'ler:** Her AppService dokümanının Referanslar bölümünde test dosya ve doküman path'leri yer alır. Detay: `CLAUDE.md §24`

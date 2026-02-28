@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
@@ -17,7 +17,7 @@ public class FitliyoDbContextFactory : IDesignTimeDbContextFactory<FitliyoDbCont
         var configuration = BuildConfiguration();
 
         var builder = new DbContextOptionsBuilder<FitliyoDbContext>()
-            .UseSqlServer(configuration.GetConnectionString("Default"));
+            .UseNpgsql(configuration.GetConnectionString("Default"));
 
         return new FitliyoDbContext(builder.Options);
     }

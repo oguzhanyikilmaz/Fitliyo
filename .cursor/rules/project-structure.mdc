@@ -1,0 +1,131 @@
+---
+description: Proje yapısı ve bağlam (çekirdek)
+globs:
+alwaysApply: true
+---
+
+# Fitliyo Backend — Proje Yapısı ve Bağlam
+
+## Proje Kimliği
+
+- **Proje**: Fitliyo — Spor & Sağlık Koçluğu Marketplace Platformu
+- **Tanım**: Personal trainer, diyetisyen, basketbol/futbol ve diğer spor koçlarını öğrencilerle buluşturan çok taraflı marketplace
+- **Tip**: Backend API (Marketplace SaaS)
+- **Stack**: .NET 9 + ABP Framework (Tiered Application) + EF Core
+- **Veritabanı**: PostgreSQL 16
+- **Cache**: Redis
+- **Background Jobs**: Hangfire
+- **Dosya Depolama**: AWS S3 / Azure Blob
+- **E-posta**: SendGrid
+- **Push Notification**: Firebase (FCM)
+- **Ödeme**: iyzico (TR pazarı) + Stripe (uluslararası)
+- **Real-time**: SignalR
+- **Logging**: Serilog + Elasticsearch
+- **Auth**: OpenIddict (JWT Bearer)
+- **Web Frontend**: Ayrı repo'da Next.js 15 (React, SSR)
+- **Mobil**: Ayrı repo'da React Native + Expo
+
+## Modül Yapısı
+
+Her modül kendi Domain / Application / HttpApi katmanlarına sahiptir:
+
+| # | Modül | Kapsam |
+|---|-------|--------|
+| 1 | **TrainerModule** | Profil, sertifika, galeri, müsaitlik takvimi |
+| 2 | **PackageModule** | Paket tipleri, fiyatlandırma, takvim şablonu |
+| 3 | **OrderModule** | Sipariş oluşturma, seans kayıtları, iptal/iade |
+| 4 | **PaymentModule** | Ödeme, escrow, wallet, para çekme |
+| 5 | **SubscriptionModule** | Eğitmen abonelik planları, otomatik yenileme |
+| 6 | **MessagingModule** | Conversation, Message, SignalR real-time |
+| 7 | **ReviewModule** | Değerlendirme, puan hesaplama, yorum |
+| 8 | **NotificationModule** | In-app, e-posta, push bildirim |
+| 9 | **ContentModule** | Blog, kategori, SEO |
+| 10 | **AdminModule** | Raporlar, moderasyon, destek talepleri |
+
+## Katman Yapısı
+
+| Katman | Path | Sorumluluk |
+|--------|------|-----------|
+| Domain | `src/Fitliyo.Domain` | Entity'ler, domain servisleri, domain event'ler |
+| Domain Shared | `src/Fitliyo.Domain.Shared` | Sabitler, enum'lar, error code'lar |
+| Contracts | `src/Fitliyo.Application.Contracts` | DTO'lar, servis arayüzleri, permission tanımları |
+| Application | `src/Fitliyo.Application` | AppService'ler (orchestration), middleware |
+| EF Core | `src/Fitliyo.EntityFrameworkCore` | DbContext, mapping, repository, migration |
+| HttpApi | `src/Fitliyo.HttpApi` | Controller'lar, API routing |
+| Web | `src/Fitliyo.Web` | Swagger host, admin panel |
+| HttpApi.Client | `src/Fitliyo.HttpApi.Client` | HTTP API client proxy |
+| DbMigrator | `src/Fitliyo.DbMigrator` | Veritabanı migration aracı |
+| Test | `test/` | Tüm testler (src altında test olmaz) |
+
+## Önemli Dosya ve Dizinler
+
+| Path | Açıklama |
+|------|----------|
+| `src/Fitliyo.Web/Fitliyo.Web.csproj` | Ana web projesi (Swagger host) |
+| `src/Fitliyo.Application/` | Tüm AppService implementasyonları |
+| `src/Fitliyo.Application.Contracts/Permissions/` | Permission tanımları |
+| `src/Fitliyo.Domain/Entities/` | Entity tanımları |
+| `src/Fitliyo.EntityFrameworkCore/EntityFrameworkCore/` | DbContext ve mapping |
+| `docs/openapi/swagger.web.v1.full.json` | API sözleşmesi (tek doğruluk kaynağı) |
+| `docs/CHANGELOG.md` | Değişiklik geçmişi |
+| `docs/frontend-changes/` | Frontend ekibi değişiklik takibi |
+| `scripts/generate_appservice_docs.py` | AppService doküman üretici |
+| `.cursor/rules/` | Cursor AI kuralları |
+
+## Kullanıcı Rolleri ve Backend Etkisi
+
+| Rol | Açıklama | Backend Etkisi |
+|-----|----------|---------------|
+| SuperAdmin | Tam yetki, platform yönetimi | Tüm CRUD, sistem konfigürasyonu |
+| Admin | Kullanıcı/içerik yönetimi, raporlar | Moderasyon, destek, dashboard API'leri |
+| Trainer | Profil, paket, takvim, müşteri yönetimi | Kendi profil/paket CRUD, seans yönetimi, wallet |
+| Student | Paket satın alma, seans takibi, mesajlaşma | Sipariş, ödeme, yorum, mesaj |
+| Guest | Arama ve profil görüntüleme | Read-only endpoint'ler, `[AllowAnonymous]` |
+
+**Trainer alt rolleri** (uzmanlık etiketi): PersonalTrainer, Dietitian, BasketballCoach, FootballCoach, TennisCoach, SwimmingCoach, YogaInstructor, Other
+
+## İş Kuralları Özeti
+
+| Kural | Detay |
+|-------|-------|
+| **Komisyon** | %15 (plan bazında override: Free %15, Basic %12, Pro %10) |
+| **Escrow** | Ödeme escrow'a alınır → ilk seans + 48 saat → AvailableBalance'a aktarım |
+| **İptal politikası** | 48 saat öncesi %100, 24-48 saat %50, 24 saat içi iade yok |
+| **Yorum** | Tamamlanmış sipariş başına 1, 7 gün penceresi |
+| **Hatırlatıcı** | 24 saat + 1 saat önce (push + in-app) |
+| **Mesajlaşma** | Satın alma öncesi ilk mesaj gönderebilir (saatte max 3 yeni konuşma) |
+| **Eğitmen abonelik** | Free (3 paket, %15), Basic (299₺/ay, sınırsız, %12), Pro (699₺/ay, sınırsız, %10) |
+
+## Geliştirme Fazları
+
+| Faz | Modüller |
+|-----|----------|
+| **Faz 1** | ABP iskelet → TrainerModule → PackageModule → Arama |
+| **Faz 2** | OrderModule → PaymentModule (iyzico webhook) → WalletModule → SubscriptionModule |
+| **Faz 3** | MessagingModule (SignalR) → ReviewModule → NotificationModule → AdminModule |
+| **Faz 4** | React Native mobil → Launch hazırlığı |
+
+## Geliştirme Workflow'u
+
+1. **Analiz**: İlgili AppService dokümanını ve swagger'ı oku
+2. **Domain**: Entity ve domain servislerini oluştur/güncelle
+3. **Contracts**: DTO'ları ve interface'leri tanımla
+4. **Application**: AppService'i implement et (authorize, cache, logging)
+5. **EF Core**: Mapping ve migration ekle
+6. **Test**: Unit/integration test yaz
+7. **Doküman**: Swagger üret → AppService dokümanı üret → CHANGELOG güncelle
+8. **PR**: Branch → commit → PR oluştur
+
+## Oturum Başlangıç Rehberi
+
+Yeni bir görev başlarken şunları belirle:
+1. Hangi modül/entity üzerinde çalışılacak?
+2. Bug fix mi, yeni özellik mi, refactoring mi?
+3. Hangi kullanıcı rollerini etkiliyor? (SuperAdmin/Admin/Trainer/Student/Guest)
+4. Ödeme/escrow/wallet davranışı var mı?
+5. Cache stratejisi gerekiyor mu?
+6. Mevcut testler etkilenecek mi?
+
+Referans:
+- `docs/README.md`
+- `docs/AUTHORIZATION-SYSTEM.md`

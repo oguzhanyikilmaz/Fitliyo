@@ -1,0 +1,47 @@
+---
+description: Kod standartları (çekirdek)
+globs:
+alwaysApply: true
+---
+
+# Kod Standartları (Çekirdek)
+
+## İsimlendirme
+
+Detaylı isimlendirme tablosu → bkz. [code-quality.mdc](code-quality.mdc) §İsimlendirme Konvansiyonları
+
+Kısaca: Class/Method **PascalCase**, değişken **camelCase**, Interface **I** prefix, Async metodlar `Async` suffix.
+
+## Metot Tasarımı
+
+- Tek sorumluluk; mümkünse **kısa** (≈ 30 satır üstüne çıkma).
+- Parametre sayısını düşük tut (≈ 4+ ise refactor).
+- Guard clause’lar ile erken return — happy path sola yaslanmalı.
+
+## Design Principles
+
+- **Composition over Inheritance**: Derin kalıtım zincirlerinden kaçın. ABP base class’ları hariç max 1 seviye kalıtım. Interface + composition tercih et.
+- **Self-Documenting Code**: Kod kendini açıklamalı. Yorumlar "ne" değil "neden" açıklar. Anlamlı isimler kullan.
+- **DRY (3+ tekrar kuralı)**: Aynı kod 3+ kez tekrarlanıyorsa abstract et. Tek kullanım için soyutlama YAPMA — erken soyutlama kötüdür.
+- **Error Wrapping**: Exception’ları domain-spesifik tiplere sarma. Inner exception’ı koru (`BusinessException("Fitliyo:...", innerException: ex)`).
+- **Immutability**: Entity property’lerinde `protected set` kullan. DTO’lar dışında mümkünse public setter’dan kaçın.
+
+## ABP / Katman Kuralları
+
+- Entity/Repository/Service pattern’lerine uy.
+- Yetkilendirme `[Authorize]` ile net (method-level).
+- DTO’lar contracts katmanında; business logic mümkünse domain servislerde.
+
+## Exception & Logging
+
+- Genel `Exception` yakalayıp yutma.
+- Kullanıcıya dönecek mesajlarda `UserFriendlyException` standardı.
+- Structured logging kullan; hassas veri loglama YASAK.
+- Error wrapping: `catch (SpecificException ex)` → `throw new BusinessException(..., innerException: ex)`.
+
+## Referanslar
+
+- [.NET/ABP Kuralları](../../.claude/skills/dotnet-abp-practices/SKILL.md) — detaylı .NET/ABP kuralları ve örnekler
+- [Güvenlik & Performans](../../.claude/skills/security-performance/SKILL.md) — P9, P11, P12, güvenlik kuralları
+- [Hata Yönetimi Standartları](../../docs/standards/ERROR_HANDLING.md)
+- [Cursor Entegrasyon Kuralları](../../docs/standards/README-CURSOR.md)

@@ -1,0 +1,105 @@
+version: "3.8"
+
+# ─── Fitliyo — İzole Network ile Çalışır ────────────────────
+# Mevcut container'lar: nginx-proxy-manager(:80,:81,:443),
+# abmistanbul-web(:3000), invnweb(:4000), thinkamore_web(:5000),
+# mssql(:1433), nopcommerce_redis(:6379)
+#
+# Fitliyo portları: Web(:6000), PostgreSQL(:5433), Redis(:6380)
+
+services:
+
+  # ─── PostgreSQL 16 ───────────────────────────────────────────
+  fitliyo-postgres:
+    image: postgres:16-alpine
+    container_name: fitliyo-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-Fitliyo}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-Str0ngP@ssw0rd!}
+    ports:
+      - "${POSTGRES_EXTERNAL_PORT:-5433}:5432"
+    volumes:
+      - fitliyo_postgres_data:/var/lib/postgresql/data
+    networks:
+      - fitliyo-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-Fitliyo}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ─── Redis (Cache) ───────────────────────────────────────────
+  fitliyo-redis:
+    image: redis:7-alpine
+    container_name: fitliyo-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_EXTERNAL_PORT:-6380}:6379"
+    volumes:
+      - fitliyo_redis_data:/data
+    networks:
+      - fitliyo-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ─── DB Migrator (tek seferlik çalışır, DB'yi hazırlar) ─────
+  fitliyo-migrator:
+    build:
+      context: .
+      dockerfile: src/Fitliyo.DbMigrator/Dockerfile
+    container_name: fitliyo-migrator
+    environment:
+      ConnectionStrings__Default: "Host=fitliyo-postgres;Port=5432;Database=${POSTGRES_DB:-Fitliyo};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-Str0ngP@ssw0rd!}"
+      OpenIddict__Applications__Fitliyo_Web__RootUrl: "http://${APP_HOST:-localhost}:${APP_PORT:-6000}"
+      OpenIddict__Applications__Fitliyo_Swagger__RootUrl: "http://${APP_HOST:-localhost}:${APP_PORT:-6000}"
+    networks:
+      - fitliyo-network
+    depends_on:
+      fitliyo-postgres:
+        condition: service_healthy
+
+  # ─── Web Uygulaması ──────────────────────────────────────────
+  fitliyo-web:
+    build:
+      context: .
+      dockerfile: src/Fitliyo.Web/Dockerfile
+    container_name: fitliyo-web
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-6000}:80"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: "http://+:80"
+      App__SelfUrl: "http://${APP_HOST:-localhost}:${APP_PORT:-6000}"
+      ConnectionStrings__Default: "Host=fitliyo-postgres;Port=5432;Database=${POSTGRES_DB:-Fitliyo};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-Str0ngP@ssw0rd!}"
+      Redis__Configuration: "fitliyo-redis:6379"
+      StringEncryption__DefaultPassPhrase: "${ENCRYPTION_PASSPHRASE:-5PIFngvTo4bwrC0H}"
+    networks:
+      - fitliyo-network
+    depends_on:
+      fitliyo-postgres:
+        condition: service_healthy
+      fitliyo-redis:
+        condition: service_healthy
+      fitliyo-migrator:
+        condition: service_completed_successfully
+
+# ─── İzole Network (diğer projelerle karışmaz) ──────────────
+networks:
+  fitliyo-network:
+    name: fitliyo-network
+    driver: bridge
+
+# ─── Volume'ler (fitliyo- prefix ile izole) ──────────────────
+volumes:
+  fitliyo_postgres_data:
+    name: fitliyo_postgres_data
+    driver: local
+  fitliyo_redis_data:
+    name: fitliyo_redis_data
+    driver: local

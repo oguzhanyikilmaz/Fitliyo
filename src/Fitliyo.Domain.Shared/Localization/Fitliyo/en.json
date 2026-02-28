@@ -4,6 +4,90 @@
     "AppName": "Fitliyo",
     "Menu:Home": "Home",
     "Welcome": "Welcome",
-    "LongWelcomeMessage": "Welcome to the application. This is a startup project based on the ABP framework. For more information, visit abp.io."
+    "LongWelcomeMessage": "Welcome to Fitliyo — Sports & Health Coaching Marketplace.",
+
+    "Permission:Fitliyo": "Fitliyo",
+
+    "Permission:Trainers": "Trainer Management",
+    "Permission:Trainers.Create": "Create Trainer Profile",
+    "Permission:Trainers.Edit": "Edit Trainer Profile",
+    "Permission:Trainers.Delete": "Delete Trainer Profile",
+    "Permission:Trainers.Verify": "Verify Trainer",
+
+    "Permission:Packages": "Package Management",
+    "Permission:Packages.Create": "Create Package",
+    "Permission:Packages.Edit": "Edit Package",
+    "Permission:Packages.Delete": "Delete Package",
+
+    "Permission:Categories": "Category Management",
+    "Permission:Categories.Create": "Create Category",
+    "Permission:Categories.Edit": "Edit Category",
+    "Permission:Categories.Delete": "Delete Category",
+
+    "Permission:Orders": "Order Management",
+    "Permission:Orders.Cancel": "Cancel Orders",
+
+    "Permission:Reviews": "Review Management",
+    "Permission:Reviews.Delete": "Delete Reviews",
+
+    "Permission:Messaging": "Messaging",
+
+    "Permission:Subscriptions": "Subscription Management",
+    "Permission:Subscriptions.ManagePlans": "Manage Subscription Plans",
+
+    "Permission:Notifications": "Notifications",
+
+    "Permission:Admin.Dashboard": "Admin Dashboard",
+    "Permission:Admin.UserManagement": "User Management",
+
+    "Enum:UserType.Trainer": "Trainer",
+    "Enum:UserType.Student": "Student",
+    "Enum:UserType.Admin": "Admin",
+
+    "Enum:TrainerType.PersonalTrainer": "Personal Trainer",
+    "Enum:TrainerType.Dietitian": "Dietitian",
+    "Enum:TrainerType.BasketballCoach": "Basketball Coach",
+    "Enum:TrainerType.FootballCoach": "Football Coach",
+    "Enum:TrainerType.TennisCoach": "Tennis Coach",
+    "Enum:TrainerType.SwimmingCoach": "Swimming Coach",
+    "Enum:TrainerType.YogaInstructor": "Yoga Instructor",
+    "Enum:TrainerType.Other": "Other",
+
+    "Enum:PackageType.SingleSession": "Single Session",
+    "Enum:PackageType.Training": "Training Package",
+    "Enum:PackageType.Nutrition": "Nutrition Package",
+    "Enum:PackageType.Combined": "Combined Package",
+    "Enum:PackageType.GroupSession": "Group Session",
+
+    "Enum:NotificationType.System": "System",
+    "Enum:NotificationType.OrderCreated": "Order Created",
+    "Enum:NotificationType.OrderConfirmed": "Order Confirmed",
+    "Enum:NotificationType.OrderCancelled": "Order Cancelled",
+    "Enum:NotificationType.OrderCompleted": "Order Completed",
+    "Enum:NotificationType.PaymentReceived": "Payment Received",
+    "Enum:NotificationType.PayoutReleased": "Payout Released",
+    "Enum:NotificationType.SessionReminder": "Session Reminder",
+    "Enum:NotificationType.SessionCancelled": "Session Cancelled",
+    "Enum:NotificationType.NewReview": "New Review",
+    "Enum:NotificationType.ReviewReply": "Review Reply",
+    "Enum:NotificationType.NewMessage": "New Message",
+    "Enum:NotificationType.SubscriptionExpiring": "Subscription Expiring",
+    "Enum:NotificationType.SubscriptionExpired": "Subscription Expired",
+    "Enum:NotificationType.ProfileVerified": "Profile Verified",
+    "Enum:NotificationType.PromotionAlert": "Promotion Alert",
+
+    "Enum:SubscriptionTier.Free": "Free",
+    "Enum:SubscriptionTier.Basic": "Basic",
+    "Enum:SubscriptionTier.Pro": "Professional",
+
+    "Enum:SubscriptionPlanType.Monthly": "Monthly",
+    "Enum:SubscriptionPlanType.Quarterly": "Quarterly",
+    "Enum:SubscriptionPlanType.Yearly": "Yearly",
+
+    "Enum:SubscriptionStatus.Active": "Active",
+    "Enum:SubscriptionStatus.PastDue": "Past Due",
+    "Enum:SubscriptionStatus.Cancelled": "Cancelled",
+    "Enum:SubscriptionStatus.Expired": "Expired",
+    "Enum:SubscriptionStatus.Trial": "Trial"
   }
 }

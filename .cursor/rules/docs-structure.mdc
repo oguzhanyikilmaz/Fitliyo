@@ -1,0 +1,80 @@
+---
+description: Docs klasörü yapısı ve hızlı erişim
+globs:
+alwaysApply: true
+---
+
+# Docs Klasörü Yapısı ve Hızlı Erişim
+
+## Kısa Özet
+
+Backend docs klasörü alt dizinler ve kök düzey dosyalar olarak organize edilmiştir. Her alt dizin belirli bir konuya odaklanır.
+
+**Ana Giriş:** `docs/README.md` — Tüm dokümantasyona tek giriş noktası
+
+## Hızlı Erişim Tablosu
+
+| Dizin / Dosya | İçerik |
+|---------------|--------|
+| `docs/README.md` | Ana dokümantasyon girişi |
+| `docs/CHANGELOG.md` | Tüm değişiklik geçmişi (her değişiklikte güncellenir) |
+| `docs/VERSIONING.md` | Versiyon standardı |
+| `docs/AUTHORIZATION-SYSTEM.md` | Yetkilendirme sistemi (roller, permission'lar) |
+| `docs/DATABASE-SCHEMA.md` | Veritabanı şeması ve tablo tanımları |
+| `docs/BUSINESS-RULES.md` | İş kuralları (ödeme akışı, iptal, komisyon) |
+| `docs/frontend-changes/` | Frontend değişiklik takibi (her giriş ayrı dosya) |
+| `docs/frontend-changes/README.md` | Frontend değişiklik index'i ve format standardı |
+| `docs/app-services/` | AppService dokümanları (generator çıktısı — manuel edit yapma) |
+| `docs/infrastructure/` | Docker, Redis cache, dosya depolama |
+| `docs/observability/` | Elasticsearch, generic logging |
+| `docs/openapi/` | Swagger snapshot (`swagger.web.v1.full.json`) |
+| `docs/operations/` | Build, deployment, DB backup/restore, job sistemi |
+| `docs/security/` | Auth, login, CORS |
+| `docs/standards/` | Error handling, dokümantasyon workflow, cursor standartları |
+| `docs/tests/` | Test planları ve stratejileri |
+
+## AI Tarama Stratejisi
+
+### Dosya Bulma
+
+1. **Konu biliniyorsa**: Doğrudan ilgili dizine git (aşağıdaki eşleştirmeye bak)
+2. **Konu bilinmiyorsa**: `docs/README.md` oku
+3. **AppService arıyorsan**: `docs/app-services/{ServisAdı}.md`
+4. **API sözleşmesi**: `docs/openapi/swagger.web.v1.full.json`
+
+### Context Tasarrufu
+
+- AppService dokümanları generator çıktısıdır; güncel olmaları `generate_appservice_docs.py` ile sağlanır
+- Swagger dosyası büyüktür; tamamını okuma, spesifik endpoint'i ara
+
+## Yaygın Sorgular → Dizin Eşleştirmesi
+
+```
+"authentication", "login", "cors", "token" → docs/security/
+"authorization", "permission", "yetki", "rol" → docs/AUTHORIZATION-SYSTEM.md
+"api", "swagger", "endpoint", "openapi" → docs/openapi/
+"appservice", "servis dokümanı" → docs/app-services/
+"veritabanı", "tablo", "entity", "şema" → docs/DATABASE-SCHEMA.md
+"ödeme", "sipariş", "escrow", "komisyon" → docs/BUSINESS-RULES.md
+"cache", "redis", "docker" → docs/infrastructure/
+"deployment", "build", "backup", "migration" → docs/operations/
+"error", "exception", "hata yönetimi" → docs/standards/ERROR_HANDLING.md
+"test", "test planı" → docs/tests/
+"log", "elasticsearch", "monitoring" → docs/observability/
+"changelog", "değişiklik" → docs/CHANGELOG.md
+"frontend değişiklik", "ui ekibi" → docs/frontend-changes/README.md
+"dokümantasyon kuralı", "workflow" → docs/standards/DOCUMENTATION_WORKFLOW.md
+"eğitmen", "trainer", "profil" → docs/app-services/TrainerProfile*.md
+"paket", "package", "hizmet" → docs/app-services/ServicePackage*.md
+"sipariş", "order", "seans" → docs/app-services/Order*.md
+"mesaj", "konuşma", "chat" → docs/app-services/Messaging*.md
+"yorum", "review", "puan" → docs/app-services/Review*.md
+"abonelik", "subscription" → docs/app-services/Subscription*.md
+```
+
+## Kritik Kurallar
+
+- `docs/app-services/*.md` → **generator çıktısı**; manuel düzenleme yapmadan önce `scripts/generate_appservice_docs.py` güncelle
+- `docs/openapi/swagger.web.v1.full.json` → **tek doğruluk kaynağı**; API sözleşmesi buradan okunur
+- Her değişiklikte `docs/CHANGELOG.md` güncellenmeli
+- UI'ı etkileyen değişikliklerde `docs/frontend-changes/YYYY-MM-DD-N.md` dosyası oluşturulmalı + index güncellenmeli

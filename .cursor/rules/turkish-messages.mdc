@@ -1,0 +1,136 @@
+---
+description: "Türkçe hata ve validation mesaj standartları"
+globs:
+  - "src/**/*.cs"
+alwaysApply: false
+---
+
+# Türkçe Mesaj Standartları (Backend)
+
+## Error Code Formatı
+
+Error code'lar `FitliyoDomainErrorCodes` sınıfında tanımlanır:
+- Dosya: `src/Fitliyo.Domain.Shared/FitliyoDomainErrorCodes.cs`
+- Format: `"Fitliyo:<Modül>:<SıraNo>"` (örn. `"Fitliyo:Order:00001"`)
+- Her error code için Türkçe XML `<summary>` zorunludur
+
+```csharp
+/// <summary>
+/// Sipariş bulunamadığında
+/// </summary>
+public const string OrderNotFound = "Fitliyo:Order:00001";
+
+/// <summary>
+/// Eğitmen profili bulunamadığında
+/// </summary>
+public const string TrainerNotFound = "Fitliyo:Trainer:00001";
+
+/// <summary>
+/// Paket dolu olduğunda
+/// </summary>
+public const string PackageFullyBooked = "Fitliyo:Package:00001";
+```
+
+## BusinessException Kullanımı
+
+Domain ve business kuralı ihlallerinde `BusinessException` kullan:
+
+```csharp
+throw new BusinessException(FitliyoDomainErrorCodes.OrderNotFound)
+    .WithData("orderId", id);
+
+throw new BusinessException(FitliyoDomainErrorCodes.PackageFullyBooked)
+    .WithData("packageId", packageId);
+
+throw new BusinessException(FitliyoDomainErrorCodes.InsufficientBalance)
+    .WithData("available", wallet.AvailableBalance);
+```
+
+## UserFriendlyException Kullanımı
+
+Kullanıcıya doğrudan gösterilecek mesajlarda `UserFriendlyException` kullan:
+
+```csharp
+throw new UserFriendlyException("Dosya seçilmedi veya boş.");
+throw new UserFriendlyException("Kayıt bulunamadı.");
+throw new UserFriendlyException("İşlem sırasında bir hata oluştu.");
+```
+
+## Standart Mesaj Şablonları
+
+### Bulunamadı Mesajları
+| Durum | Mesaj |
+|-------|-------|
+| Kayıt bulunamadı | `"{Entity} bulunamadı."` |
+| Eğitmen bulunamadı | `"Eğitmen profili bulunamadı."` |
+| Paket bulunamadı | `"Hizmet paketi bulunamadı."` |
+| Sipariş bulunamadı | `"Sipariş bulunamadı."` |
+
+### Çakışma / Tekrar Mesajları
+| Durum | Mesaj |
+|-------|-------|
+| Zaten mevcut | `"{Alan} zaten mevcut."` |
+| Slug çakışması | `"Bu slug zaten kullanılmaktadır."` |
+| Sipariş başına 1 yorum | `"Bu sipariş için zaten değerlendirme yapılmış."` |
+
+### Validation Mesajları
+| Durum | Mesaj |
+|-------|-------|
+| Zorunlu alan | `"{Alan} zorunludur."` |
+| Geçersiz format | `"Geçerli bir {alan} giriniz."` |
+| Tarih aralığı | `"Bitiş tarihi başlangıç tarihinden önce olamaz."` |
+| Pozitif değer | `"Tutar sıfır veya negatif olamaz."` |
+| Maksimum uzunluk | `"{Alan} en fazla {n} karakter olabilir."` |
+
+### Ödeme / Sipariş Mesajları
+| Durum | Mesaj |
+|-------|-------|
+| Yetersiz bakiye | `"Yetersiz bakiye. Mevcut bakiye: {miktar}"` |
+| İptal süresi geçmiş | `"İptal süresi dolmuştur."` |
+| Ödeme başarısız | `"Ödeme işlemi başarısız oldu."` |
+| Para çekme talebi | `"Para çekme talebi oluşturuldu."` |
+
+### İşlem Sonuç Mesajları
+| Durum | Mesaj |
+|-------|-------|
+| Başarılı oluşturma | `"Kayıt başarıyla oluşturuldu."` |
+| Başarılı güncelleme | `"Kayıt başarıyla güncellendi."` |
+| Başarılı silme | `"Kayıt başarıyla silindi."` |
+| İşlem hatası | `"İşlem sırasında bir hata oluştu."` |
+| Yetki yok | `"Bu işlem için yetkiniz bulunmamaktadır."` |
+
+### Silme Koruması Mesajları
+| Durum | Mesaj |
+|-------|-------|
+| Bağımlı kayıt var | `"Bu kayda bağlı aktif kayıtlar var, silinemez."` |
+| Aktif sipariş var | `"Aktif siparişler olduğu için paket silinemez."` |
+
+## DTO Validation Attribute Mesajları
+
+```csharp
+[Required(ErrorMessage = "Başlık alanı zorunludur.")]
+[StringLength(256, ErrorMessage = "Başlık en fazla 256 karakter olabilir.")]
+public string Title { get; set; }
+
+[EmailAddress(ErrorMessage = "Geçerli bir e-posta adresi giriniz.")]
+public string Email { get; set; }
+
+[Range(0, double.MaxValue, ErrorMessage = "Fiyat sıfırdan küçük olamaz.")]
+public decimal Price { get; set; }
+
+[Range(1, 5, ErrorMessage = "Puan 1 ile 5 arasında olmalıdır.")]
+public int Rating { get; set; }
+```
+
+## Log Mesajları (Structured Logging)
+
+```csharp
+_logger.LogInformation("{EntityType} oluşturuldu: {EntityId}", "Order", entity.Id);
+_logger.LogWarning("{EntityType} bulunamadı: {EntityId}", "TrainerProfile", id);
+_logger.LogError(ex, "Ödeme işlemi başarısız: {OrderId}, {Provider}", orderId, provider);
+```
+
+**Kurallar:**
+- Log mesajlarında Türkçe karakter kullanılabilir ama property placeholder'lar İngilizce olmalı
+- Hassas veri (IBAN, kredi kartı, şifre, token) loglanmaz
+- Structured logging formatı: `{PropertyName}` — string interpolation (`$""`) kullanma

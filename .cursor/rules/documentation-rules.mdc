@@ -1,0 +1,213 @@
+---
+description: Fitliyo Backend Dokümantasyon Kuralları (docs/ + swagger snapshot)
+globs:
+alwaysApply: true
+---
+
+# Dokümantasyon Kuralları (Backend)
+
+## 1) Tek Kaynak Prensibi (ZORUNLU)
+
+- **Tek dokümantasyon girişi**: `docs/README.md`
+- Repo kökünde **yalnızca** `README.md` bulunur ve bu dosya **kısa landing page**’dir.
+- Detaylı tüm dokümantasyon **`docs/` altında** tutulur.
+
+## 2) Kod Değişirse Doküman Değişir (ZORUNLU)
+
+Bir PR aşağıdakilerden herhangi birini içeriyorsa ilgili doküman(lar) **zorunlu** güncellenir:
+
+- **Yeni endpoint** / endpoint değişikliği
+- **DTO değişikliği** (field ekleme/silme/nullable değişimi/validation)
+- **Permission/Authorization değişikliği**
+- **Multi-tenant / SubTenant davranışı**
+- **Cache davranışı** (TTL/invalidation/key pattern)
+- **Error code / exception mapping**
+- **Background job davranışı**
+- **Deployment/operasyon** değişikliği
+
+## 3) API Sözleşmesi: "Birebir" Kuralı (UI için kritik)
+
+- AppService dokümanlarının **endpoint / parametre / request / response / model** bölümleri **tahmin edilmez**.
+- **Tek doğruluk kaynağı**: `docs/openapi/swagger.web.v1.full.json`
+- UI repo/assets altındaki swagger çıktıları **kaynak değildir**.
+
+### 3.1) Dinamik Alan Dokümantasyonu (KRİTİK)
+
+AppService dokümanları oluşturulurken/güncellenirken:
+
+- **Swagger'da görünmeyen dinamik alanlar tespit edilmeli ve dokümante edilmeli**
+- `SetProperty()` ile DTO'lara eklenen alanlar belirtilmeli
+- `ExtraProperties` içine eklenen tüm alanlar listelenmeli
+- UserEnricher gibi zenginleştirme servisleri ile eklenen veriler açıklanmalı
+- Stored Procedure'lerden gelen dinamik veriler dokümante edilmeli
+
+**Örnek Dinamik Alanlar:**
+- TrainerProfileDto'ya eklenen: `AverageRating`, `TotalReviewCount`
+- Zenginleştirme verileri: `Categories`, `SpecialtyTags`
+- İlişkili veriler: `TrainerCertificates`, `TrainerGallery`
+- Detay bilgiler: `ServicePackages`, `AvailabilitySchedule`
+
+Bu alanlar swagger'da görünmese bile, kod analizi yapılarak tespit edilip dokümante edilmelidir.
+
+### 3.2) Dinamik Alan Eklenmesi → Frontend Değişiklik Takibi (ZORUNLU)
+
+`SetProperty()` veya `ExtraProperties` üzerinden **yeni bir alan eklendiğinde** aşağıdaki adımlar zorunludur:
+
+1. AppService dokümanında ilgili response tablosuna 🆕 etiketiyle ekle
+2. `docs/frontend-changes/YYYY-MM-DD-N.md` oluştur (`track-frontend-change` komutu)
+3. `docs/CHANGELOG.md` güncelle
+
+Bu alanlar Swagger'da görünmez; frontend ekibi ancak bu takip dosyalarından haberdar olabilir.
+
+```csharp
+// Bu satır → zorunlu olarak frontend-changes dosyası gerektirir
+entity.SetProperty("SgkJobCode", value);
+```
+
+## 4) Swagger Snapshot Üretimi (ZORUNLU)
+
+API sözleşmesi değiştiyse veya AppService dokümanları güncellenecekse önce:
+
+```bash
+# Repo root’tan çalıştırın
+dotnet run --project src/Fitliyo.Web -- --generate-swagger docs/openapi/swagger.web.v1.full.json
+```
+
+> **Uyarı:** Bu komut `Fitliyo.Web` modüllerini initialize eder. Development ortamında hangi DB/servislere bağlandığınıza dikkat edin.
+
+## 5) AppService Dokümanlarını Üretme (ZORUNLU)
+
+**`src/Fitliyo.Application/**/*AppService.cs` değiştiğinde doküman yenileme ZORUNLUDUR.**
+
+```bash
+python3 scripts/generate_appservice_docs.py
+```
+
+- `docs/app-services/*.md` dosyaları **generator çıktısıdır**.
+- Manuel edit yapılacaksa önce generator güncellenmeli, sonra tekrar üretilmelidir.
+- **Otomatik tetikleme:** AppService dosyası düzenlendiğinde (commit öncesi veya düzenleme bitiminde) bu script AI tarafından **otomatik çalıştırılmalıdır**.
+
+## 6) Versiyonlama ve Changelog (ZORUNLU)
+
+- Versiyon standardı: [`docs/VERSIONING.md`](../../docs/VERSIONING.md)
+- Her anlamlı doküman değişikliğinde: [`docs/CHANGELOG.md`](../../docs/CHANGELOG.md) güncellenir.
+- İstemciyi etkileyen değişikliklerde: [`docs/BACKEND_CHANGES_FOR_FRONTEND_TEAM.md`](../../docs/BACKEND_CHANGES_FOR_FRONTEND_TEAM.md) güncellenir.
+
+## 7) Dil ve Format
+
+- Dokümantasyon dili: **Türkçe**
+- Kod örnekleri: kısa ve kopyalanabilir
+- **🆕 Dokümanlararası Linkler (ZORUNLU)**:
+  - Diğer dokümanlara referans verirken **mutlaka tıklanabilir link** formatı kullanılmalı
+  - Format: `[Dokümantasyon Adı](yol/dosya.md)`
+  - Örnek: `[CHANGELOG](../../docs/CHANGELOG.md)`, `[Yetkilendirme Sistemi](../../docs/AUTHORIZATION-SYSTEM.md)`
+  - Sadece dosya adı yazılmamalı, mutlaka link formatında olmalı
+  - Relative path kullanılmalı (docs/... veya ../ şeklinde)
+- **Yeni Eklenen İçerikler**: 🆕 (NEW) tag'i ile işaretlenmeli
+  - Yeni endpoint'ler
+  - Yeni alanlar (dinamik olarak eklenenler dahil)
+  - Yeni kurallar veya değişiklikler
+  - Son güncelleme tarihinden sonra eklenenler
+
+## 🆕 8) Yetkilendirme Dokümantasyonu (ZORUNLU)
+
+**HER** AppService dokümanında (`docs/app-services/*.md`) **Yetkilendirme Matrisi** bölümü (1.1) **zorunlu** olarak bulunmalıdır:
+
+### 8.1) Yetkilendirme Matrisi İçeriği
+
+Her AppService dokümanının "Kod Metodları" bölümünün hemen altında (Bölüm 1.1) şu tablo yer almalıdır:
+
+| Method | Yetkilendirme | Self-Access | Açıklama |
+|--------|---------------|-------------|----------|
+
+Bu tabloda:
+- **Tüm public method'lar** listelenmeli (CRUD + özel method'lar)
+- **Class-level** `[Authorize]` bilgisi tablonun üstünde belirtilmeli
+- **Method-level** `[Authorize(FitliyoPermissions.XXX)]` override'ları gösterilmeli
+- **`[AllowSelfAccess]`** attribute'leri ve parametreleri (`userId`, `UserId`, `Module` bilgisi) gösterilmeli
+- **`[AllowAnonymous]`** varsa açıkça belirtilmeli
+- **Constructor policy** (GetPolicyName, GetListPolicyName vb.) varsa belirtilmeli
+
+### 8.2) Frontend Planı Dokümanlarında Yetkilendirme (ZORUNLU)
+
+Frontend planı/iş planı dokümanlarında (`docs/*_FRONTEND_PLANI.md` vb.) şunlar **zorunlu**:
+- **Tab/sayfa özet tablosunda** yetkilendirme sütunu olmalı (boş bırakılmamalı)
+- **Her tab/bölüm başlığının altında** `**Yetkilendirme:**` satırı bulunmalı
+- `[Authorize]` (policysiz) olan endpoint'ler bile "sadece authenticated" olarak belirtilmeli
+- **Lookup endpoint tablosunda** yetkilendirme sütunu bulunmalı
+- "-" yerine gerçek yetkilendirme bilgisi yazılmalı; yetki yoksa `[AllowAnonymous]` veya `[Authorize]` (policysiz) olarak açıkça belirtilmeli
+
+### 8.3) Yetkilendirme Bilgisinin Kaynağı
+
+Yetkilendirme bilgisi **koddan** tespit edilmelidir, **tahmin edilmez**:
+- `src/Fitliyo.Application/` altındaki AppService dosyaları okunmalı
+- Class-level ve method-level `[Authorize]` attribute'leri tespit edilmeli
+- Constructor'daki policy atamaları (GetPolicyName, CreatePolicyName vb.) kontrol edilmeli
+- `[AllowSelfAccess]` ve `[AllowAnonymous]` attribute'leri tespit edilmeli
+
+## 9) PR Kontrol Listesi (Minimum)
+
+- `docs/openapi/swagger.web.v1.full.json` güncel mi?
+- `docs/app-services/*.md` yeniden üretildi mi?
+- `docs/CHANGELOG.md` güncellendi mi? **(HER DEĞİŞİKLİK İÇİN ZORUNLU)**
+- Error format/permission/caching değiştiyse ilgili standart doküman güncellendi mi?
+- 🆕 **AppService dokümanlarında Yetkilendirme Matrisi (Bölüm 1.1) var mı?**
+- 🆕 **Frontend planı dokümanlarında yetkilendirme bilgisi eksiksiz mi?**
+- 🆕 **Proje yapısı/stack/komutlar değiştiyse `README.md` (proje kökü) güncellendi mi?**
+
+## 10) CHANGELOG Güncelleme Kuralı (ZORUNLU)
+
+**HER** kod değişikliği, kural değişikliği veya dokümantasyon güncellemesi [`docs/CHANGELOG.md`](../../docs/CHANGELOG.md) dosyasına eklenmelidir:
+
+> **Aylık Arşivleme:** Aktif ay `docs/CHANGELOG.md`'de, eski aylar [`docs/changelog/`](../../docs/changelog/) altında `YYYY-MM.md` dosyalarında tutulur. Her ay sonunda: `python3 scripts/archive_changelog.py`
+
+- Kod değişiklikleri (yeni özellik, bug fix, refactoring)
+- Dokümantasyon güncellemeleri (manuel veya otomatik)
+- Kural değişiklikleri (.cursorrules, .cursor/rules/)
+- API sözleşmesi değişiklikleri
+- Konfigürasyon değişiklikleri
+
+### 🆕 10.1) CHANGELOG Organizasyon Kuralı
+
+**CHANGELOG'da detay vermek yerine ilgili dokümana yönlendirme yapılmalı:**
+
+- **Yanlış**: UserEnricher.cs dosyasında GetEnrichmentDataAsync metodu güncellendi, userId ve roleNames alanları hem büyük hem küçük harfle gönderiliyor...
+- **Doğru**: UserEnricher zenginleştirmeleri güncellendi. Detaylar: [`FitliyoProfileAppService.md`](../../docs/app-services/FitliyoProfileAppService.md)
+
+**Teknik detaylar ilgili AppService dokümanında tutulmalı:**
+- Kod değişikliği detayları
+- Dinamik alan eklemeleri
+- Method güncellemeleri
+- Implementation notları
+
+**🆕 AppService Doküman Sıralaması:**
+1. Kod Metodları (sadece imza, detay yok)
+2. **🆕 Yetkilendirme Matrisi** (tüm method'ların yetki bilgisi — Bölüm 1.1)
+3. Endpoint Listesi
+4. Request/Response Modelleri
+5. Değişiklik Geçmişi (tarih ile, yeniden eskiye, UI odaklı)
+6. Referanslar
+
+**🆕 Değişiklik Geçmişi Kuralları:**
+- Backend metod/class isimleri yazılmaz
+- Sadece UI'ı etkileyen değişiklikler yazılır
+- Ne değişti ve UI'da nasıl kullanılıyor odaklı olmalı
+- Kısa, net, UI developer'a yönelik
+
+**CHANGELOG'da sadece özet ve link olmalı:**
+- Ne değişti (genel özet)
+- Hangi servisi/modülü etkiliyor
+- Detaylar için hangi dokümana bakılmalı (link ile)
+
+## 11) Frontend Team (Next.js) Değişiklik Bildirimi (ZORUNLU)
+
+**YALNIZCA Next.js frontend ekibini etkileyen** API/DTO/SignalR değişiklikleri `docs/frontend-changes/` klasörüne ayrı dosya olarak eklenmelidir.
+
+**KAPSAM (KRİTİK):** MVC Razor Pages, MVC JavaScript dosyaları ve sadece backend'i etkileyen değişiklikler bu klasöre **EKLENMEz**.
+
+**Detaylı standart, format, badge'ler ve adımlar:** → bkz. [frontend-change-tracking.mdc](frontend-change-tracking.mdc)
+
+### Skill Referansları
+
+- [Dokümantasyon Kuralları](../../.claude/skills/documentation-practices/SKILL.md) — dokümantasyon kuralları özeti
+- [Detaylı Kurallar](../../.claude/skills/documentation-practices/references/rules.md) — CHANGELOG, endpoint kontrol, dynamic field detayları

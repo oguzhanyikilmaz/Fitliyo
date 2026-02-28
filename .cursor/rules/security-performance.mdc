@@ -1,0 +1,38 @@
+---
+description: Güvenlik + performans kuralları (çekirdek)
+globs:
+alwaysApply: true
+---
+
+# Güvenlik ve Performans Kuralları (Çekirdek)
+
+## Güvenlik
+
+- **Hassas veri**: kod içinde sabitlenmez; loglarda maskelenir.
+- **AuthN/AuthZ**: her kritik işlemde `[Authorize]` / `AuthorizationService.CheckAsync()` uygulanır.
+- **Input doğrulama**: DTO validation + business validation.
+- **SQL injection**: parametreli sorgular / LINQ kullan; string concat ile SQL üretme.
+- **XSS/CSRF**: web katmanında standart korumalar; form'larda anti-forgery.
+
+Referans:
+- `docs/security/AUTH_LOGIN_AND_CORS.md`
+- `docs/AUTHORIZATION-SYSTEM.md`
+- `docs/standards/ERROR_HANDLING.md`
+
+## Performans
+
+- **N+1 (veritabanı)**: `Include`/projection ile çöz; gereksiz eager load yapma.
+- **N+1 (dış servis — KRİTİK)**: Döngü içinde dış servis çağrısı (MinIO, HTTP, Redis, SMTP, SignalR) YASAK. Servis katmanında toplu batch metodu oluştur/kullan. `Task.WhenAll` yalnızca batch metot **içinde** kontrollü (try-catch + loglama) kullanılır; iş mantığında doğrudan kullanılmaz. Bu kural mevcut kodda da geçerlidir — dosyaya dokunulduğunda düzeltilir.
+- **Tüm tablo çekme (P12 — KRİTİK)**: `GetListAsync()` veya benzeri metodları **parametresiz** çağırarak tüm tabloyu tek sorguda getirmek KESİNLİKLE YASAK. Her zaman `skipCount` + `maxResultCount` ile sayfalı sorgulama kullan. Büyük veri setine ihtiyaç varsa `while` + batch döngüsü kur. `ExtraProperties` gibi DB'de filtrelenemeyenler için de sayfalı yükleme zorunludur.
+- **P12 — JavaScript/Frontend**: `getList()` çağrısı parametresiz YASAK → her zaman `skipCount`, `maxResultCount`, `sorting` geçilmeli. DataTable'da `serverSide: false` YASAK → `serverSide: true` + `input.start`/`input.length` kullan. Dropdown/cache yüklemelerinde `maxResultCount` en fazla **200**; `1000` veya parametresiz YASAK.
+- **Paging**: büyük listelerde her zaman sayfalama.
+- **Async**: `async/await` doğru kullan; uzun işler için `CancellationToken`.
+- **Cache**: sık okunan verilerde cache-first; mutation sonrası invalidation.
+- **Background jobs**: uzun süren işleri Hangfire job'a taşı.
+- **Toplu işlem**: Birden fazla öğe üzerinde aynı dış servis operasyonu gerektiğinde batch API kullan/oluştur.
+
+Referans:
+- [Güvenlik & Performans Skill](../../.claude/skills/security-performance/SKILL.md) — detaylı P9, P11, P12 kuralları
+- [Doğru/Yanlış Örnekler](../../.claude/skills/security-performance/references/rules.md) — kod kalıpları
+- `docs/infrastructure/REDIS_CACHE_IMPLEMENTATION.md`
+- `docs/operations/README_JOB_SYSTEM.md`

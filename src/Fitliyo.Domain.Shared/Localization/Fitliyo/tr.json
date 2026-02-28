@@ -2,8 +2,92 @@
   "culture": "tr",
   "texts": {
     "AppName": "Fitliyo",
-    "Menu:Home": "Ana sayfa",
-    "Welcome": "Hoşgeldiniz",
-    "LongWelcomeMessage": "Uygulamaya hoşgeldiniz. Bu, ABP framework'ü üzerine bina edilmiş bir başlangıç projesidir. Daha fazla bilgi için abp.io adresini ziyaret edebilirsiniz."
+    "Menu:Home": "Ana Sayfa",
+    "Welcome": "Hoş Geldiniz",
+    "LongWelcomeMessage": "Fitliyo — Spor & Sağlık Koçluğu Marketplace Platformuna hoş geldiniz.",
+
+    "Permission:Fitliyo": "Fitliyo",
+
+    "Permission:Trainers": "Eğitmen Yönetimi",
+    "Permission:Trainers.Create": "Eğitmen Profili Oluştur",
+    "Permission:Trainers.Edit": "Eğitmen Profili Düzenle",
+    "Permission:Trainers.Delete": "Eğitmen Profili Sil",
+    "Permission:Trainers.Verify": "Eğitmen Doğrula",
+
+    "Permission:Packages": "Paket Yönetimi",
+    "Permission:Packages.Create": "Paket Oluştur",
+    "Permission:Packages.Edit": "Paket Düzenle",
+    "Permission:Packages.Delete": "Paket Sil",
+
+    "Permission:Categories": "Kategori Yönetimi",
+    "Permission:Categories.Create": "Kategori Oluştur",
+    "Permission:Categories.Edit": "Kategori Düzenle",
+    "Permission:Categories.Delete": "Kategori Sil",
+
+    "Permission:Orders": "Sipariş Yönetimi",
+    "Permission:Orders.Cancel": "Sipariş İptal Et",
+
+    "Permission:Reviews": "Değerlendirme Yönetimi",
+    "Permission:Reviews.Delete": "Değerlendirme Sil",
+
+    "Permission:Messaging": "Mesajlaşma",
+
+    "Permission:Subscriptions": "Abonelik Yönetimi",
+    "Permission:Subscriptions.ManagePlans": "Abonelik Planlarını Yönet",
+
+    "Permission:Notifications": "Bildirimler",
+
+    "Permission:Admin.Dashboard": "Admin Dashboard",
+    "Permission:Admin.UserManagement": "Kullanıcı Yönetimi",
+
+    "Enum:UserType.Trainer": "Eğitmen",
+    "Enum:UserType.Student": "Öğrenci",
+    "Enum:UserType.Admin": "Yönetici",
+
+    "Enum:TrainerType.PersonalTrainer": "Kişisel Antrenör",
+    "Enum:TrainerType.Dietitian": "Diyetisyen",
+    "Enum:TrainerType.BasketballCoach": "Basketbol Koçu",
+    "Enum:TrainerType.FootballCoach": "Futbol Koçu",
+    "Enum:TrainerType.TennisCoach": "Tenis Koçu",
+    "Enum:TrainerType.SwimmingCoach": "Yüzme Koçu",
+    "Enum:TrainerType.YogaInstructor": "Yoga Eğitmeni",
+    "Enum:TrainerType.Other": "Diğer",
+
+    "Enum:PackageType.SingleSession": "Tekli Ders",
+    "Enum:PackageType.Training": "Eğitim Paketi",
+    "Enum:PackageType.Nutrition": "Beslenme Paketi",
+    "Enum:PackageType.Combined": "Kombine Paket",
+    "Enum:PackageType.GroupSession": "Grup Dersi",
+
+    "Enum:NotificationType.System": "Sistem",
+    "Enum:NotificationType.OrderCreated": "Sipariş Oluşturuldu",
+    "Enum:NotificationType.OrderConfirmed": "Sipariş Onaylandı",
+    "Enum:NotificationType.OrderCancelled": "Sipariş İptal Edildi",
+    "Enum:NotificationType.OrderCompleted": "Sipariş Tamamlandı",
+    "Enum:NotificationType.PaymentReceived": "Ödeme Alındı",
+    "Enum:NotificationType.PayoutReleased": "Ödeme Serbest Bırakıldı",
+    "Enum:NotificationType.SessionReminder": "Ders Hatırlatması",
+    "Enum:NotificationType.SessionCancelled": "Ders İptal Edildi",
+    "Enum:NotificationType.NewReview": "Yeni Değerlendirme",
+    "Enum:NotificationType.ReviewReply": "Değerlendirme Yanıtı",
+    "Enum:NotificationType.NewMessage": "Yeni Mesaj",
+    "Enum:NotificationType.SubscriptionExpiring": "Abonelik Sona Eriyor",
+    "Enum:NotificationType.SubscriptionExpired": "Abonelik Sona Erdi",
+    "Enum:NotificationType.ProfileVerified": "Profil Doğrulandı",
+    "Enum:NotificationType.PromotionAlert": "Kampanya Bildirimi",
+
+    "Enum:SubscriptionTier.Free": "Ücretsiz",
+    "Enum:SubscriptionTier.Basic": "Temel",
+    "Enum:SubscriptionTier.Pro": "Profesyonel",
+
+    "Enum:SubscriptionPlanType.Monthly": "Aylık",
+    "Enum:SubscriptionPlanType.Quarterly": "3 Aylık",
+    "Enum:SubscriptionPlanType.Yearly": "Yıllık",
+
+    "Enum:SubscriptionStatus.Active": "Aktif",
+    "Enum:SubscriptionStatus.PastDue": "Vadesi Geçmiş",
+    "Enum:SubscriptionStatus.Cancelled": "İptal Edildi",
+    "Enum:SubscriptionStatus.Expired": "Süresi Doldu",
+    "Enum:SubscriptionStatus.Trial": "Deneme"
   }
 }

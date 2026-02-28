@@ -1,0 +1,675 @@
+---
+description: "Kapsamlı code review kuralları — her commit/PR öncesi ZORUNLU kontrol"
+globs:
+  - "src/**/*.cs"
+alwaysApply: true
+---
+
+# Code Review Kuralları (ZORUNLU)
+
+Bu kontrol listesi her kod değişikliğinde (commit veya PR öncesi) uygulanır. AI, `code-review` komutu çalıştırıldığında veya commit hazırlarken bu kontrolleri otomatik yapar.
+
+## KAPSAM KURALI (KRİTİK)
+
+**Bir dosyada herhangi bir işlem yapıldığında (düzenleme, yeni metod, bug fix, refactoring), o dosyanın TAMAMI review edilir — sadece değişen satırlar değil.**
+
+- Dosya açıldığında veya düzenlendiğinde, dosyadaki TÜM public metodlar kontrol edilir
+- Sadece git diff'teki satırlara bakılmaz; dosyanın bütünü taranır
+- Proje kural ve mimarisine uymayan HER sorun tespit edilir ve düzeltilir
+- Mevcut (pre-existing) sorunlar da bulunur ve düzeltilir — "ben değiştirmedim" mazeret değildir
+- Eksik authorization, eksik logging, naming ihlali, boş catch, mimari ihlal vb. dosyanın neresinde olursa olsun raporlanır ve düzeltilir
+
+**Neden?** Bir dosyaya dokunduğumuzda o dosyanın kalitesinden sorumluyuz. "Boy Scout Rule" — dosyayı bulduğundan daha temiz bırak.
+
+### TODO Yorumları (ASLA ES GECME)
+
+Dosyada `// TODO:`, `// FIXME:`, `// HACK:`, `// XXX:` gibi yorumlar varsa:
+1. Tümünü tespit et ve listele
+2. Her birini kullanıcıya göster ve "Bu TODO'yu tamamlamamı ister misin?" diye sor
+3. Kullanıcı onaylarsa → TODO'yu tamamla ve yorumu kaldır
+4. Kullanıcı istemezse → TODO'yu olduğu gibi bırak ama raporda belirt
+5. **Hiçbir zaman sessizce geçme** — TODO'lar görünmez borçtur
+
+---
+
+## 1) Güvenlik
+
+| # | Kontrol | Seviye | Açıklama |
+|---|---------|--------|----------|
+| S1 | `[Authorize]` var mı? | KRİTİK | Her public AppService metodu method-level `[Authorize]` taşımalı |
+| S2 | Class-level policy yok mu? | KRİTİK | `[Authorize(FitliyoPermissions....)]` class-level YASAK; sadece policysiz `[Authorize]` olabilir |
+| S3 | Self-access kontrolü var mı? | KRİTİK | Kişisel veri dönen metodlarda `[AllowSelfAccess]` olmalı |
+| S4 | SQL injection riski var mı? | KRİTİK | String interpolation/concat ile SQL üretilmemeli; LINQ veya parametreli sorgu kullan |
+| S5 | Hassas veri loglanıyor mu? | KRİTİK | Şifre, token, TC kimlik, IBAN log'a yazılmamalı |
+| S6 | Hassas veri hardcoded mı? | KRİTİK | Connection string, API key, şifre kod içinde sabitlenmemeli |
+| S7 | Input validation var mı? | YÜKSEK | DTO'larda `[Required]`, `[StringLength]`, `[Range]` vb. |
+| S8 | `[AllowAnonymous]` gerekli mi? | YÜKSEK | Bilinçli kullanılmalı, gereksiz yere public endpoint açılmamalı |
+
+### Kontrol nasıl yapılır:
+```
+→ Değişen .cs dosyalarında [Authorize] attribute ara
+→ Class-level policy varsa UYAR
+→ DTO dosyalarında validation attribute kontrolü
+→ Log çağrılarında hassas alan adı arama (password, token, tcKimlik, iban, secret)
+→ String concat ile SQL pattern arama ($"SELECT, $"UPDATE, $"DELETE, string.Format + SQL)
+```
+
+---
+
+## 2) Performans
+
+| # | Kontrol | Seviye | Açıklama |
+|---|---------|--------|----------|
+| P1 | N+1 query var mı? | KRİTİK | Döngü içinde repository/DbContext çağrısı → `Include`, tek sorgu veya toplu batch yap |
+| P2 | Paging var mı? | YÜKSEK | Liste dönen metodlarda `PagedResultRequestDto` kullanılmalı |
+| P3 | Cache-first uygulandı mı? | ORTA | Okuma operasyonlarında önce cache kontrol |
+| P4 | Cache invalidation var mı? | YÜKSEK | Create/Update/Delete sonrası ilgili cache temizlenmeli |
+| P5 | `Task.Result` / `Task.Wait()` var mı? | KRİTİK | Deadlock riski; `await` kullan |
+| P6 | Gereksiz eager load var mı? | ORTA | Kullanılmayan navigation property'ler Include edilmemeli |
+| P7 | Büyük veri memory'de mi? | ORTA | `ToListAsync()` yerine streaming/paging düşün |
+| P8 | `CancellationToken` var mı? | ORTA | Async metodlarda destek olmalı |
+| P9 | Döngü içinde dış servis çağrısı var mı? | KRİTİK | Döngü/for/foreach içinde MinIO, HTTP, Redis, SMTP, SignalR gibi dış servis çağrısı YASAK → toplu batch metodu yaz/kullan |
+| P10 | Toplu batch imkânı var mı? | YÜKSEK | N adet sıralı await yerine toplu metot (batch API) varsa onu kullan; yoksa oluştur |
+| P11 | `Task.WhenAll` güvenli mi? | YÜKSEK | `Task.WhenAll` sadece batch metot **içinde** ve kontrollü kullanılır — iş mantığında doğrudan kullanılmaz (aşağıdaki kurala bak) |
+
+### Kontrol nasıl yapılır:
+```
+→ foreach/for içinde await çağrısı ara (repository, dış servis, HTTP client, file storage, cache, SMTP hepsi dahil)
+→ GetList metodlarında PagedResultRequestDto kullanımı kontrol
+→ .Result, .Wait(), .GetAwaiter().GetResult() ara
+→ Async metod imzalarında CancellationToken parametresi kontrol
+→ Liste dönen metodlarda sonuç üzerinde sıralı dış servis çağrısı (URL üretme, dosya işlemi, bildirim vb.) ara
+```
+
+### 🆕 P9 — Döngü İçinde Dış Servis Çağrısı Anti-Pattern (KRİTİK)
+
+**Kapsam:** Bu kural sadece veritabanı sorguları ile sınırlı DEĞİLDİR. Aşağıdaki TÜM dış servis çağrılarını kapsar:
+
+| Kategori | Örnek Servisler |
+|----------|----------------|
+| Dosya Depolama | MinIO (`GetPresignedUrlAsync`, `UploadAsync`, `ExistsAsync`) |
+| HTTP İstemci | `HttpClient`, `IRestClient`, harici API çağrıları |
+| Cache | Redis (`GetAsync`, `SetAsync`, `RemoveAsync`) |
+| Bildirim | SMTP, SMS, Push notification, SignalR (toplu gönderim) |
+| Veritabanı | Repository (`GetAsync`, `FindAsync`, `GetListAsync`) |
+| Blob/CDN | Azure Blob, S3, CDN URL üretimi |
+
+**Anti-pattern (YASAK):**
+```csharp
+// ❌ N adet sıralı dış servis çağrısı — 500 kişi = 500 istek = 5-15 saniye bekleme
+for (var i = 0; i < dtos.Count; i++)
+    await _fileStorageService.GetPresignedUrlAsync(bucket, dtos[i].Path);
+```
+
+**Doğru pattern (ZORUNLU):**
+```csharp
+// ✅ Toplu batch çağrısı — çağıran taraf temiz kalır
+var urlMap = await _fileStorageService.GetPresignedUrlsAsync(bucket, paths);
+foreach (var dto in dtos)
+    if (urlMap.TryGetValue(dto.Path, out var url))
+        dto.Url = url;
+```
+
+**Düzeltme stratejisi (öncelik sırasıyla):**
+1. İlgili servis interface'inde toplu batch metodu var mı kontrol et
+2. Varsa → batch metodunu kullan (çağıran tarafta `Task.WhenAll` KULLANMA)
+3. Yoksa → servis interface'ine batch metodu oluştur (`GetPresignedUrlsAsync`, `GetByIdsAsync`, `SendBatchAsync` vb.)
+4. Batch metot **içinde** paralelleme gerekiyorsa → orada `Task.WhenAll` + hata yönetimi + loglama yap
+5. **Bu kural mevcut (pre-existing) kodda da geçerlidir** — dosyaya dokunulduğunda düzeltilir
+
+### 🆕 P11 — `Task.WhenAll` Kullanım Kuralları (DİKKAT)
+
+`Task.WhenAll` **güçlü ama tehlikeli** bir araçtır. Yanlış kullanımı:
+- Connection pool tükenmesi (DB, HTTP, MinIO)
+- Rate limiting / throttling hataları
+- Partial failure — 499 başarılı, 1 hata → tüm `AggregateException` fırlar
+- Kaynak tükenmesi (thread/socket exhaustion)
+
+**KURAL: `Task.WhenAll` doğrudan iş mantığında (AppService/Controller) KULLANILMAZ.**
+
+`Task.WhenAll` yalnızca şu koşullarda kullanılabilir:
+1. **Batch servis metodu içinde** (ör. `GetPresignedUrlsAsync` implementasyonu) — dışarıya temiz bir API sunulur
+2. **Try-catch ile sarılı** — her bir task'ın hatası bağımsız yakalanır
+3. **Loglama** — hatalı öğeler loglanır, diğerleri etkilenmez
+4. **Sonuç sözlüğü** ile döner — başarılılar dahil, başarısızlar hariç (veya ayrı rapor)
+
+**❌ YASAK — AppService'te doğrudan Task.WhenAll:**
+```csharp
+// ❌ Tehlikeli: 500 paralel MinIO isteği, hata yönetimi yok, connection pool tükenir
+var tasks = dtos.Select(d => _fileStorageService.GetPresignedUrlAsync(bucket, d.Path));
+var results = await Task.WhenAll(tasks);
+```
+
+**✅ DOĞRU — Batch metot içinde kontrollü Task.WhenAll:**
+```csharp
+// Batch metot (FileStorageService içinde)
+public async Task<Dictionary<string, string>> GetPresignedUrlsAsync(
+    string bucket, IEnumerable<string> objectNames, TimeSpan? expiry = null)
+{
+    var result = new Dictionary<string, string>();
+    var tasks = objectNames.Select(async name =>
+    {
+        try
+        {
+            var url = await _provider.GetPresignedUrlAsync(bucket, name, expiry);
+            return (name, url, success: true);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Presigned URL hatası: {ObjectName}", name);
+            return (name, url: (string?)null, success: false);
+        }
+    });
+    var results = await Task.WhenAll(tasks);
+    foreach (var r in results)
+        if (r.success) result[r.name] = r.url!;
+    return result;
+}
+
+// AppService'te (temiz çağrı):
+var urlMap = await _fileStorageService.GetPresignedUrlsAsync(bucket, paths);
+```
+
+**Özet:** Paralellik karmaşıklığını **servis katmanında** kapsülle, **iş mantığını** temiz tut.
+
+---
+
+## 3) ABP / Katman Kuralları
+
+| # | Kontrol | Seviye | Açıklama |
+|---|---------|--------|----------|
+| A1 | İş mantığı doğru katmanda mı? | YÜKSEK | Domain logic → Domain servis; orchestration → AppService |
+| A2 | DTO doğru katmanda mı? | YÜKSEK | DTO'lar `Application.Contracts` içinde olmalı |
+| A3 | Application'dan DbContext erişimi var mı? | KRİTİK | Doğrudan DbContext YASAK; Repository kullan |
+| A4 | Constructor policy atamaları var mı? | ORTA | CRUD servislerinde `GetPolicyName`, `CreatePolicyName` vb. |
+| A5 | `IMultiTenant` uygulanmış mı? | YÜKSEK | Multi-tenant entity'lerde `TenantId` olmalı |
+| A6 | `IMultiSubTenant` uygulanmış mı? | YÜKSEK | SubTenant filtreleme gereken entity'lerde |
+| A7 | `IHasUserId` uygulanmış mı? | YÜKSEK | Kullanıcıya ait entity'lerde `UserId` olmalı |
+| A8 | Protected constructor var mı? | ORTA | Entity'lerde EF Core için `protected` boş constructor |
+
+### Kontrol nasıl yapılır:
+```
+→ Entity dosyalarında interface kontrolü (IMultiTenant, IMultiSubTenant, IHasUserId)
+→ Application katmanındaki dosyalarda DbContext/FitliyoDbContext import arama
+→ DTO dosyalarının Application.Contracts altında olduğunu doğrula
+```
+
+---
+
+## 4) Hata Yönetimi
+
+| # | Kontrol | Seviye | Açıklama |
+|---|---------|--------|----------|
+| E1 | Genel `catch (Exception)` var mı? | YÜKSEK | Spesifik exception yakala; genel catch YASAK |
+| E2 | Boş catch bloğu var mı? | KRİTİK | Exception yutulmamalı; en azından logla |
+| E3 | `UserFriendlyException` doğru mu? | ORTA | Kullanıcıya dönen mesajlar Türkçe ve anlamlı |
+| E4 | `BusinessException` error code var mı? | ORTA | `FitliyoDomainErrorCodes` sabiti kullanılmalı |
+| E5 | Null check / guard clause var mı? | YÜKSEK | Metod başında parametre kontrolü |
+| E6 | Catch bloğunda scope dışı değişken mi? | KRİTİK | try içinde tanımlanan değişken catch'te erişilemez; metod parametresi veya try öncesi değişken kullan |
+
+### Kontrol nasıl yapılır:
+```
+→ catch (Exception) veya catch (Exception ex) { } (boş body) ara
+→ throw new UserFriendlyException çağrılarında Türkçe mesaj kontrolü
+→ throw new BusinessException çağrılarında FitliyoDomainErrorCodes kullanımı
+```
+
+---
+
+## 5) Loglama
+
+| # | Kontrol | Seviye | Açıklama |
+|---|---------|--------|----------|
+| L1 | Structured logging kullanılıyor mu? | YÜKSEK | `_logger.LogInformation("{UserId}", id)` — string interpolation YASAK |
+| L2 | Hassas veri loglanıyor mu? | KRİTİK | Şifre, token, TC kimlik loglanmamalı |
+| L3 | Önemli işlemler loglanıyor mu? | ORTA | Create/Update/Delete işlemleri loglanmalı |
+| L4 | Exception loglanıyor mu? | YÜKSEK | Catch bloklarında `_logger.LogError(ex, ...)` olmalı |
+
+### Kontrol nasıl yapılır:
+```
+→ _logger.Log* çağrılarında $"..." (string interpolation) arama → structured logging olmalı
+→ Log çağrılarında password, token, secret, tcKimlik, iban alanları arama
+```
+
+---
+
+## 6) Kod Kalitesi
+
+| # | Kontrol | Seviye | Açıklama |
+|---|---------|--------|----------|
+| K1 | Metot 50+ satır mı? | ORTA | Refactor öner; tek sorumluluk prensibi |
+| K2 | Parametre sayısı 5+ mı? | ORTA | Parametre nesnesi (DTO/record) öner |
+| K3 | Magic string/number var mı? | YÜKSEK | Sabit (const/enum) olarak tanımla |
+| K4 | Kullanılmayan import var mı? | DÜŞÜK | Temizle |
+| K5 | Naming convention'a uygun mu? | ORTA | PascalCase, _camelCase, Async suffix |
+| K6 | XML summary var mı? | ORTA | Public entity ve kritik property'lerde Türkçe `<summary>` |
+| K7 | `DateTime.UtcNow` kullanılmış mı? | YÜKSEK | `DateTime.Now` kullan (proje Türkiye lokali ile çalışır) |
+| K8 | `public` field var mı? | YÜKSEK | Property kullan |
+| K9 | Dosyada birden fazla tip tanımı var mı? | YÜKSEK | Her class, interface, enum, record kendi dosyasında olmalı — tek dosyada tek tip |
+
+---
+
+## 7) Multi-Tenancy & SubTenant
+
+| # | Kontrol | Seviye | Açıklama |
+|---|---------|--------|----------|
+| M1 | Tenant context doğru mu? | KRİTİK | Cross-tenant veri sızıntısı riski |
+| M2 | SubTenant filtreleme var mı? | YÜKSEK | `IMultiSubTenant` entity'lerde SubTenantId filtrelenmeli |
+| M3 | Job'larda tenant context var mı? | KRİTİK | Background job'larda `ClaimsIdentity` auth type ile oluşturulmalı |
+| M4 | Context switch doğru mu? | KRİTİK | `new ClaimsIdentity(claims, "ContextSwitch")` — auth type zorunlu |
+
+---
+
+## 8) Dokümantasyon Etkisi
+
+| # | Kontrol | Seviye | Açıklama |
+|---|---------|--------|----------|
+| D1 | CHANGELOG güncellendi mi? | ZORUNLU | Her anlamlı değişiklikte |
+| D2 | Next.js frontend etkileniyor mu? | ZORUNLU | Evet → `docs/frontend-changes/YYYY-MM-DD-N.md` oluştur (MVC değişiklikleri hariç!) |
+| D3 | Yetkilendirme matrisi güncel mi? | ZORUNLU | Permission değiştiyse AppService dokümanı güncelle |
+| D4 | Swagger güncellenmeli mi? | ZORUNLU | Endpoint/DTO değiştiyse snapshot üret |
+
+---
+
+## 9) Katman Bağımlılık Kontrolü (MİMARİ KORUMA)
+
+Proje mimarisinin bozulmaması için katmanlar arası bağımlılıklar **kesinlikle** kontrol edilir.
+
+### İzin Verilen Bağımlılık Haritası
+
+```mermaid
+graph TD
+    DomainShared["Domain.Shared<br/>(enum, const, error code)"]
+    Domain["Domain<br/>(entity, domain servis)"]
+    Contracts["Application.Contracts<br/>(DTO, interface, permission)"]
+    Application["Application<br/>(AppService, orchestration)"]
+    EFCore["EntityFrameworkCore<br/>(mapping, repository)"]
+    HttpApi["HttpApi<br/>(controller)"]
+    Web["Web<br/>(host, Razor)"]
+    RedisCache["RedisCache"]
+    FileStorage["FileStorage"]
+    Mailing["Mailing"]
+    Publisher["Publisher"]
+    HangfireCore["Hangfire.Core"]
+    Hangfire["Hangfire"]
+    WebClient["Web.Client"]
+    Logging["Logging"]
+
+    Domain --> DomainShared
+    Contracts --> DomainShared
+    Contracts --> Domain
+    Application --> Contracts
+    Application --> Domain
+    EFCore --> Domain
+    EFCore --> DomainShared
+    HttpApi --> Contracts
+    HttpApi --> Application
+    RedisCache --> DomainShared
+    RedisCache --> Contracts
+    FileStorage --> DomainShared
+    Publisher --> DomainShared
+    Mailing --> DomainShared
+    Mailing --> Contracts
+    Logging --> DomainShared
+    Logging --> Contracts
+    WebClient --> RedisCache
+    WebClient --> Logging
+    HangfireCore --> EFCore
+    HangfireCore --> Contracts
+    Application --> WebClient
+    Application --> FileStorage
+    Application --> Mailing
+    Application --> Publisher
+    Hangfire --> Application
+    Hangfire --> HangfireCore
+    Hangfire --> EFCore
+    HttpApi --> FileStorage
+    Web --> Application
+    Web --> HttpApi
+    Web --> EFCore
+    Web --> RedisCache
+    Web --> Hangfire
+```
+
+### YASAK Bağımlılıklar (KRİTİK)
+
+| Kaynak Katman | YASAK Hedef | Neden |
+|---------------|-------------|-------|
+| **Domain** | Application, EFCore, HttpApi, Web | Domain saf kalmalı; altyapıdan bağımsız |
+| **Domain** | Contracts | Domain, Contracts'a bağımlı olmamalı (tersi olmalı) |
+| **Domain.Shared** | HER PROJE | En alt katman; hiçbir şeye bağımlı olmamalı |
+| **Contracts** | Application, EFCore, HttpApi | Contracts sadece tanım içerir; implementasyon bilmez |
+| **Application** | EFCore, HttpApi, Web | Application, altyapı detaylarını bilmemeli |
+| **Application** | DbContext, IDbContextFactory | Doğrudan EF Core erişimi YASAK; Repository kullan |
+| **EFCore** | Application, HttpApi, Web | EFCore sadece Domain bilir |
+| **HttpApi** | EFCore, Web | Controller sadece AppService çağırır |
+
+### Kontrol Nasıl Yapılır
+
+```
+→ Değişen dosyanın hangi projede olduğunu belirle
+→ Dosyadaki using/import satırlarını kontrol et
+→ Yasak bağımlılık varsa KRİTİK hata olarak raporla
+→ Özellikle şu pattern'lere dikkat:
+  - Domain katmanında: using Fitliyo.Application.* veya using Fitliyo.EntityFrameworkCore.*
+  - Application katmanında: using Microsoft.EntityFrameworkCore.* veya using Fitliyo.EntityFrameworkCore.*
+  - Contracts katmanında: using Fitliyo.Application.* (implementasyon import'u)
+```
+
+### Sık Yapılan İhlaller
+
+| İhlal | Örnek | Doğrusu |
+|-------|-------|---------|
+| Application'dan DbContext | `_dbContext.Users.Where(...)` | `_repository.GetListAsync(...)` |
+| Domain'den Repository çağrısı | `_userRepo.GetAsync(id)` | Domain servisine repository inject et, Application'da çağır |
+| Contracts'ta iş mantığı | `if (dto.Amount > 0) ...` validation logic | Validation → DTO attribute; business → Domain servis |
+| HttpApi'de iş mantığı | Controller'da if/else business logic | AppService'e taşı |
+
+---
+
+## 10) Mantık Hatası Tespiti
+
+Kod değişikliklerinde iş mantığı hataları aktif olarak aranır ve doğrusu önerilir.
+
+### Kontrol Edilenler
+
+| # | Kontrol | Açıklama |
+|---|---------|----------|
+| M1 | **Koşul tersliği** | `if (user != null)` olması gereken yerde `if (user == null)` |
+| M2 | **Tarih karşılaştırma** | `startDate > endDate` kontrolünün eksik veya ters olması |
+| M3 | **Null reference riski** | Nullable değer kontrol edilmeden kullanım |
+| M4 | **Off-by-one** | Döngü/sayfalama sınırlarında ±1 hatası |
+| M5 | **Yanlış enum kullanımı** | Enum karşılaştırmada yanlış değer |
+| M6 | **Eksik filter** | Multi-tenant/SubTenant filtresinin atlanması |
+| M7 | **Race condition** | Check-then-act pattern'inde yarış durumu |
+| M8 | **Yanlış sıralama** | Create'de önce child sonra parent oluşturma |
+| M9 | **Cache tutarsızlığı** | Veri güncellendi ama cache invalidate edilmedi |
+| M10 | **Authorization bypass** | Self-access kontrolünde userId doğrulaması eksik |
+
+### Kontrol Nasıl Yapılır
+
+```
+→ if/else koşullarını semantik olarak analiz et
+→ Date karşılaştırmalarında mantık kontrolü
+→ Nullable erişimlerde ?. veya null check olup olmadığı
+→ CRUD operasyonlarında işlem sırası (parent önce, child sonra)
+→ Cache okuma/yazma/silme tutarlılığı
+→ Authorization flow'da userId parametresinin doğrulanması
+```
+
+### Raporlama Formatı
+
+```markdown
+### [MANTIK] Satır 120: Tarih karşılaştırma hatası
+**Mevcut:** `if (input.EndDate > input.StartDate)` → Bitiş tarihi başlangıçtan büyükse hata fırlatıyor
+**Sorun:** Koşul ters; bitiş tarihi başlangıçtan büyük olması NORMAL
+**Öneri:** `if (input.EndDate < input.StartDate) throw new BusinessException(...)`
+```
+
+---
+
+## 11) Kod Tekrarı ve Mevcut Kod Kontrolü (YENİ KOD YAZMADAN ÖNCE)
+
+**Yeni kod yazmadan veya yeni bir metod/servis eklemeden önce**, projede aynı işi yapan mevcut kodun olup olmadığı **zorunlu** kontrol edilir.
+
+### Kontrol Sırası
+
+1. **Aynı isimde metod/servis var mı?** → Grep ile ara
+2. **Benzer iş yapan metod var mı?** → Semantic search ile ara
+3. **Ortak utility/helper var mı?** → `Extensions/`, `Helpers/`, `Shared/` klasörlerini kontrol et
+4. **Base class'ta var mı?** → `CrudAppService`, `ApplicationService` base metodlarını kontrol et
+5. **Domain serviste var mı?** → İş mantığı zaten domain'de mi?
+
+### Aranacak Yerler
+
+| Yeni Eklenecek | Kontrol Edilecek Yerler |
+|----------------|----------------------|
+| AppService metodu | Aynı entity'nin mevcut AppService'i, base class metodları |
+| Helper/Extension metodu | `src/**/Extensions/`, `src/**/Helpers/`, `Domain.Shared` |
+| DTO | `Application.Contracts` altında benzer DTO |
+| Repository metodu | `IRepository<T>` base metodları, mevcut custom repository |
+| Validation logic | Mevcut DTO attribute'ları, `FluentValidation` kuralları |
+| Cache key/pattern | `RedisCache/` altındaki mevcut cache servisleri |
+| Error code | `FitliyoDomainErrorCodes` mevcut sabitler |
+| Permission | `FitliyoPermissions` mevcut tanımlar |
+| Enum | `Domain.Shared/Enums/` mevcut enum'lar |
+
+### Yaygın Tekrar Pattern'leri
+
+| Tekrar | Çözüm |
+|--------|-------|
+| Her servisde aynı null check | Guard clause helper veya base class'a taşı |
+| Her servisde aynı cache pattern | Generic cache servis (`ICacheService<T>`) |
+| Her servisde aynı SubTenant filtre | `IMultiSubTenant` + global query filter |
+| Her servisde aynı user lookup | `IUserLookupService` veya mevcut helper |
+| Her DTO'da aynı alanlar | Base DTO class (ör. `AuditedEntityDto`) |
+| Aynı exception mesajı farklı yerlerde | `FitliyoDomainErrorCodes` sabiti |
+
+### Raporlama Formatı
+
+```markdown
+### [TEKRAR] GetTrainerByIdAsync — Mevcut kod zaten var
+**Yeni eklenen:** `ReviewAppService.GetTrainerByIdAsync(Guid trainerProfileId)`
+**Mevcut:** `TrainerProfileAppService.GetAsync(Guid id)` aynı işi yapıyor (satır 45)
+**Öneri:** Mevcut `TrainerProfileAppService.GetAsync` kullanılmalı veya `ITrainerProfileRepository` inject edilmeli
+```
+
+```markdown
+### [TEKRAR] Cache key pattern tekrarı
+**Yeni eklenen:** `$"TrainerPackages:{trainerProfileId}"` (satır 80)
+**Mevcut:** `ServicePackageCacheService` zaten bu cache key'i yönetiyor
+**Öneri:** `IServicePackageCacheService` inject edip mevcut metodu kullan
+```
+
+### AI Talimatı
+
+Yeni kod yazarken şu adımlar **otomatik** uygulanır:
+1. Eklenecek metod/class ismini projede Grep ile ara
+2. Benzer işlev yapan kodları SemanticSearch ile ara
+3. Base class metodlarını kontrol et (CrudAppService'in GetAsync, GetListAsync, CreateAsync vb.)
+4. Mevcut helper/extension'ları kontrol et
+5. Tekrar tespit edilirse → mevcut kodu kullanmayı öner, yeni kod yazmaktan kaçın
+
+---
+
+## Review Çıktı Formatı
+
+### Temel Kural: Her Bulgu = Kesin Çözüm + Opsiyonel Alternatifler
+
+Her review bulgusu şu yapıda raporlanır:
+
+1. **Sorun tespiti** (ne, nerede, neden)
+2. **Kesin çözüm** (uygulanması gereken düzeltme — kod ile)
+3. **Alternatif çözümler** (varsa, artı/eksileriyle birlikte)
+
+### Bulgu Formatı
+
+```markdown
+#### [KATEGORİ-NUMARA] Satır XX: Kısa başlık
+**Seviye:** KRİTİK / YÜKSEK / ORTA
+**Sorun:** Ne yanlış ve neden sorun
+**Mevcut kod:**
+\```csharp
+// satır XX
+sorunlu kod buraya
+\```
+
+**Kesin Çözüm:**
+\```csharp
+// düzeltilmiş kod
+doğru kod buraya
+\```
+
+**Alternatif Çözümler:** (varsa)
+| # | Çözüm | Artıları | Eksileri |
+|---|-------|----------|---------|
+| A | Kısa açıklama + kod snippet | Avantajlar | Dezavantajlar |
+| B | Kısa açıklama + kod snippet | Avantajlar | Dezavantajlar |
+```
+
+### Tam Rapor Örneği
+
+```markdown
+## Code Review Raporu
+
+**Dosya:** `src/Fitliyo.Application/Xxx/XxxAppService.cs`
+**Tarih:** YYYY-MM-DD
+**Durum:** ❌ Kritik sorunlar var
+
+---
+
+#### [S1] Satır 45: GetListAsync metodunda [Authorize] eksik
+**Seviye:** KRİTİK
+**Sorun:** Public AppService metodu authorization attribute'siz; herkes erişebilir.
+**Mevcut kod:**
+\```csharp
+public override async Task<PagedResultDto<XxxDto>> GetListAsync(GetXxxListDto input)
+\```
+
+**Kesin Çözüm:**
+\```csharp
+[Authorize(FitliyoPermissions.Xxx.View)]
+[AllowSelfAccess("UserId", Module = SelfAccessModules.Xxx)]
+public override async Task<PagedResultDto<XxxDto>> GetListAsync(GetXxxListDto input)
+\```
+
+---
+
+#### [BAG] Satır 3: Application katmanından EF Core import edilmiş
+**Seviye:** KRİTİK
+**Sorun:** Application katmanı altyapı detaylarını bilmemeli; mimari katman ihlali.
+**Mevcut kod:**
+\```csharp
+using Microsoft.EntityFrameworkCore;
+// ...
+var users = await _dbContext.Users.Where(x => x.IsActive).ToListAsync();
+\```
+
+**Kesin Çözüm:**
+\```csharp
+var users = await _userRepository.GetListAsync(x => x.IsActive);
+\```
+
+**Alternatif Çözümler:**
+| # | Çözüm | Artıları | Eksileri |
+|---|-------|----------|---------|
+| A | Custom repository metodu ekle (`IUserRepository.GetActiveUsersAsync`) | Semantik, test edilebilir, tekrar kullanılabilir | Yeni interface + implementasyon |
+| B | Specification pattern (`new ActiveUsersSpec()`) | ABP uyumlu, composable | Küçük sorgular için over-engineering |
+
+---
+
+#### [P1] Satır 80: Döngü içinde repository çağrısı (N+1)
+**Seviye:** YÜKSEK
+**Sorun:** Her iterasyonda ayrı DB sorgusu → N+1 problem; 100 kayıtta 101 sorgu.
+**Mevcut kod:**
+\```csharp
+foreach (var item in items)
+{
+    var user = await _userRepository.GetAsync(item.UserId);
+    item.UserName = user.Name;
+}
+\```
+
+**Kesin Çözüm:**
+\```csharp
+var userIds = items.Select(x => x.UserId).Distinct().ToList();
+var users = await _userRepository.GetListAsync(x => userIds.Contains(x.Id));
+var userMap = users.ToDictionary(x => x.Id);
+foreach (var item in items)
+{
+    if (userMap.TryGetValue(item.UserId, out var user))
+        item.UserName = user.Name;
+}
+\```
+
+**Alternatif Çözümler:**
+| # | Çözüm | Artıları | Eksileri |
+|---|-------|----------|---------|
+| A | Include ile eager loading (EF Core navigation) | Tek sorgu, basit | Sadece EFCore'da çalışır, gereksiz veri yüklenebilir |
+| B | Projection ile DTO direkt çek | En performanslı, sadece gerekli alanlar | Mapping karmaşıklığı |
+
+---
+
+#### [MANTIK] Satır 85: Tarih karşılaştırma hatası
+**Seviye:** YÜKSEK
+**Sorun:** Bitiş tarihi başlangıçtan büyükse hata fırlatılıyor — koşul ters.
+**Mevcut kod:**
+\```csharp
+if (input.EndDate > input.StartDate)
+    throw new BusinessException(FitliyoDomainErrorCodes.InvalidDateRange);
+\```
+
+**Kesin Çözüm:**
+\```csharp
+if (input.EndDate < input.StartDate)
+    throw new BusinessException(FitliyoDomainErrorCodes.InvalidDateRange);
+\```
+
+---
+
+#### [TEKRAR] GetTrainerDisplayNameAsync — mevcut kod zaten var
+**Seviye:** ORTA
+**Sorun:** Aynı işi yapan `TrainerProfileAppService.GetAsync` zaten profil bilgilerini döndürüyor.
+**Mevcut kod:**
+\```csharp
+private async Task<string> GetTrainerDisplayNameAsync(Guid trainerProfileId)
+{
+    var profile = await _trainerProfileRepository.GetAsync(trainerProfileId);
+    var user = await _userRepository.GetAsync(profile.UserId);
+    return $"{user.Name} {user.Surname}";
+}
+\```
+
+**Kesin Çözüm:**
+\```csharp
+var profile = await _trainerProfileAppService.GetAsync(trainerProfileId);
+var displayName = profile.TrainerFullName;
+\```
+
+**Alternatif Çözümler:**
+| # | Çözüm | Artıları | Eksileri |
+|---|-------|----------|---------|
+| A | Cache'li TrainerProfile kullan | Tekrar yok, performanslı | Dependency eklenmeli |
+| B | Denormalize alan (TrainerProfile.DisplayName) | Sorgu gerekmiyor | Senkronizasyon gerekir |
+
+---
+
+### Özet
+| Kategori | Kritik | Uyarı | Bilgi |
+|----------|--------|-------|-------|
+| Güvenlik | 1 | 0 | 0 |
+| Performans | 0 | 1 | 0 |
+| Katman Bağımlılık | 1 | 0 | 0 |
+| Mantık Hatası | 1 | 0 | 0 |
+| Kod Tekrarı | 0 | 1 | 0 |
+| Dokümantasyon | 0 | 0 | 2 |
+| **Toplam** | **3** | **2** | **2** |
+```
+
+### Çözüm Sunma Kuralları (AI için ZORUNLU)
+
+1. **Her bulgu mutlaka "Kesin Çözüm" içermeli** — sadece sorun tespit etmek yetmez
+2. Kesin çözüm **uygulanabilir kod** olmalı — soyut tavsiye değil, kopyala-yapıştır yapılabilir
+3. Kesin çözüm projenin **mevcut pattern ve convention'larına** uygun olmalı
+4. Alternatif çözümler varsa **artı/eksi tablosuyla** sunulmalı
+5. Alternatifler arasında **hangi durumda hangisinin tercih edilmesi gerektiği** belirtilmeli
+6. Çözüm önerisinde **mevcut projeden benzer doğru kullanım örneği** varsa referans gösterilmeli
+
+---
+
+## Otomatik Tetikleme
+
+Bu review kuralları şu durumlarda uygulanır:
+1. **Dosya düzenlendiğinde** — düzenlenen dosyanın TAMAMI review edilir (sadece diff değil)
+2. **`code-review` komutu** çalıştırıldığında — staged veya belirtilen dosyaların tamamı taranır
+3. **Commit oluşturulurken** — AI otomatik kontrol yapar
+4. **`full-check` komutu** çalıştırıldığında — tüm kontroller sırayla
+
+**Düzenleme sırasında:** Bir dosyada tek satır bile değiştirildiyse, o dosyadaki TÜM sorunlar (pre-existing dahil) tespit edilir ve düzeltilir. Sadece değişen satırlara bakılmaz.
+
+Referanslar:
+- [`.cursor/rules/code-quality.mdc`](code-quality.mdc) — Detaylı kod kalitesi standartları
+- [`.cursor/rules/security-performance.mdc`](security-performance.mdc) — Güvenlik ve performans kuralları
+- [`.cursor/rules/auto-generation.mdc`](auto-generation.mdc) — Entity/AppService kuralları
+- [`docs/standards/ERROR_HANDLING.md`](../../docs/standards/ERROR_HANDLING.md) — Hata yönetimi standardı
+- [`docs/AUTHORIZATION-SYSTEM.md`](../../docs/AUTHORIZATION-SYSTEM.md) — Yetkilendirme sistemi

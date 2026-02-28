@@ -1,0 +1,98 @@
+---
+description: "PR, branch ve commit konvansiyonları"
+globs:
+alwaysApply: true
+---
+
+# PR ve Git Konvansiyonları
+
+## Branch İsimlendirme
+
+| Prefix | Kullanım | Örnek |
+|--------|----------|-------|
+| `feature/` | Yeni özellik | `feature/trainer-profile` |
+| `bugfix/` | Hata düzeltme | `bugfix/cache-invalidation` |
+| `hotfix/` | Acil production düzeltme | `hotfix/auth-token-expire` |
+| `refactor/` | Kod iyileştirme | `refactor/appservice-cache` |
+| `docs/` | Sadece dokümantasyon | `docs/authorization-matrix` |
+| `chore/` | Altyapı/config değişiklikleri | `chore/docker-compose-update` |
+
+Format: `<prefix>/<kebab-case-açıklama>`
+
+## Commit Mesaj Formatı
+
+```
+<tip>: <Türkçe kısa özet>
+```
+
+### Tip'ler
+
+| Tip | Açıklama | Örnek |
+|-----|----------|-------|
+| `feat` | Yeni özellik | `feat: ServicePackage CRUD endpoint'leri eklendi` |
+| `fix` | Hata düzeltme | `fix: cache invalidation sorunu giderildi` |
+| `refactor` | Kod iyileştirme (davranış değişmez) | `refactor: AppService cache pattern'i güncellendi` |
+| `docs` | Dokümantasyon | `docs: authorization matrisi eklendi` |
+| `test` | Test ekleme/güncelleme | `test: UserAddress AppService unit test'leri` |
+| `chore` | Altyapı/build/config | `chore: Docker compose Redis konfigürasyonu` |
+| `perf` | Performans iyileştirme | `perf: N+1 query sorunu Include ile çözüldü` |
+| `style` | Kod formatı (davranış değişmez) | `style: namespace düzenleme` |
+
+### Kurallar
+
+- Özet satırı **Türkçe**, kısa ve anlamlı
+- İlk harf küçük (tip kısmı), özet kısmı büyük harfle başlar
+- Zorunlu değil ama `(<kapsam>)` eklenebilir: `feat(asset): zimmet kategorisi CRUD eklendi`
+- Body (opsiyonel): ne ve neden değiştiğinin detaylı açıklaması
+
+## PR Şablonu
+
+```markdown
+## Özet
+<!-- 1-3 cümle: ne değişti ve neden -->
+
+## Değişiklikler
+- [ ] Yeni endpoint / endpoint değişikliği
+- [ ] DTO değişikliği
+- [ ] Permission değişikliği
+- [ ] Cache davranışı değişikliği
+- [ ] Migration eklendi
+- [ ] Dokümantasyon güncellendi
+
+## Test Planı
+<!-- Nasıl test edildi / edilecek -->
+
+## Kontrol Listesi
+- [ ] Build başarılı
+- [ ] Mevcut testler geçiyor
+- [ ] Swagger snapshot güncellendi (`generate-swagger`)
+- [ ] AppService dokümanları güncellendi (`generate-appservice-docs`)
+- [ ] CHANGELOG.md güncellendi
+- [ ] Frontend ekibini etkileyen değişiklik varsa BACKEND_CHANGES_FOR_FRONTEND_TEAM.md güncellendi
+- [ ] Yetkilendirme matrisi güncel
+```
+
+## PR Kontrol Listesi (Minimum)
+
+Her PR'da şunlar kontrol edilmeli:
+
+1. **Build**: `dotnet build` başarılı mı?
+2. **Test**: `dotnet test` başarılı mı?
+3. **Test kapsamı**: Yeni/değiştirilen her metot için test yazıldı mı?
+4. **Swagger**: API değiştiyse `docs/openapi/swagger.web.v1.full.json` güncel mi?
+5. **Doküman**: `docs/app-services/*.md` güncel mi?
+6. **CHANGELOG**: `docs/CHANGELOG.md` güncellendi mi?
+7. **Frontend**: UI etkisi varsa `docs/frontend-changes/YYYY-MM-DD-N.md` oluşturuldu mu?
+8. **Yetki**: Permission değiştiyse yetkilendirme matrisi güncel mi?
+
+## Git Güvenlik Kuralları
+
+- **Kullanıcı istemeden commit yapma** — git commit yalnızca açıkça istendiğinde
+- **Force push YASAK** (main/master'a kesinlikle, diğer branch'lere kullanıcı izniyle)
+- **Destructive komutlar** (`reset --hard`, `checkout .`, `clean -fd`, `branch -D`) → yalnızca açık kullanıcı isteği ile
+- **Hook'ları atlatma YASAK** (`--no-verify`, `--no-gpg-sign`) → hook başarısızsa kök nedeni düzelt
+- **Hook başarısız → yeni commit** — `--amend` kullanma (önceki commit'i bozabilir)
+
+## Referanslar
+
+- [Çalışma Akışı Kuralları](../../.claude/skills/workflow-practices/SKILL.md) — detaylı git ve çalışma akışı kuralları

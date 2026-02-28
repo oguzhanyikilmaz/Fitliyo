@@ -1,0 +1,167 @@
+{
+    // Fitliyo Project - Cursor IDE Settings
+    // .NET Configuration
+    "dotnet.defaultSolution": "Fitliyo.sln",
+    "dotnet.server.useOmnisharp": false,
+    "omnisharp.enableEditorConfigSupport": true,
+    "omnisharp.enableRoslynAnalyzers": false,
+    "omnisharp.path": "latest",
+    "omnisharp.useModernNet": true,
+    "omnisharp.enableDecompilationSupport": false,
+    "omnisharp.organizeImportsOnFormat": true,
+    "omnisharp.loggingLevel": "warning",
+    "omnisharp.projectLoadTimeout": 120,
+    "omnisharp.maxProjectResults": 250,
+    // File Associations
+    "files.associations": {
+        "*.cshtml": "razor",
+        "*.razor": "razor"
+    },
+    // File Exclusions (Performance)
+    "files.exclude": {
+        "**/bin": true,
+        "**/obj": true,
+        "**/.vs": true,
+        "**/node_modules": true,
+        "**/.git": true,
+        "**/wwwroot/libs": true
+    },
+    // Search Exclusions
+    "search.exclude": {
+        "**/bin": true,
+        "**/obj": true,
+        "**/node_modules": true,
+        "**/wwwroot/libs": true,
+        "**/*.min.js": true,
+        "**/*.min.css": true
+    },
+    // File Watching
+    "files.watcherExclude": {
+        "**/bin/**": true,
+        "**/obj/**": true,
+        "**/node_modules/**": true
+    },
+    // Editor Settings
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": true,
+    "editor.wordWrap": "off",
+    // Disable HTML formatter line wrapping and attribute wrapping
+    "html.format.wrapLineLength": 0,
+    "html.format.wrapAttributes": "preserve",
+    // Prettier: don't wrap long lines (increase print width and disable prose wrap)
+    "prettier.printWidth": 200,
+    "prettier.proseWrap": "never",
+    "prettier.htmlWhitespaceSensitivity": "ignore",
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit",
+        "source.fixAll": "explicit"
+    },
+    // C# Specific
+    "[csharp]": {
+        "editor.defaultFormatter": "anysphere.csharp",
+        "editor.tabSize": 4,
+        "editor.insertSpaces": true,
+        "editor.detectIndentation": false
+    },
+    // JSON Specific
+    "[json]": {
+        "editor.defaultFormatter": "vscode.json-language-features",
+        "editor.tabSize": 4
+    },
+    // HTML/Razor Specific
+    "[html]": {
+        "editor.defaultFormatter": "vscode.html-language-features",
+        "editor.tabSize": 4
+    },
+    "[razor]": {
+        "editor.defaultFormatter": "anysphere.csharp",
+        "editor.tabSize": 4,
+        "editor.insertSpaces": true
+    },
+    // JavaScript/CSS
+    "[javascript]": {
+        "editor.defaultFormatter": "vscode.typescript-language-features",
+        "editor.tabSize": 2
+    },
+    "[css]": {
+        "editor.defaultFormatter": "vscode.css-language-features",
+        "editor.tabSize": 2
+    },
+    // Terminal
+    "terminal.integrated.defaultProfile.windows": "PowerShell",
+    "terminal.integrated.defaultProfile.osx": "zsh",
+    "terminal.integrated.defaultProfile.linux": "bash",
+    // Git
+    "git.enableSmartCommit": true,
+    "git.confirmSync": false,
+    "git.autofetch": true,
+    // IntelliSense
+    "editor.suggestSelection": "first",
+    "editor.acceptSuggestionOnCommitCharacter": true,
+    "editor.acceptSuggestionOnEnter": "on",
+    // Fitliyo Specific Snippets
+    "editor.snippetSuggestions": "top",
+    // Extensions
+    "extensions.ignoreRecommendations": true,
+    // Cursor AI Settings
+    "cursor.ai.enableCodeActions": true,
+    "cursor.ai.enableInlineCompletion": true,
+    "cursor.ai.model": "gpt-5",
+    // Fitliyo Project Specific
+    "Fitliyo.autoGeneratePermissions": true,
+    "Fitliyo.enableSubTenantFiltering": true,
+    "Fitliyo.cacheStrategy": "redis",
+    // Debugging
+    "debug.allowBreakpointsEverywhere": true,
+    "debug.inlineValues": "on",
+    "debug.openDebug": "openOnDebugBreak",
+    "debug.showInStatusBar": "always",
+    "debug.terminal.clearBeforeReusing": true,
+    "debug.onTaskErrors": "showErrors",
+    "debug.javascript.autoAttachFilter": "smart",
+    "debug.saveBeforeStart": "allEditorsInActiveGroup",
+    // Problems
+    "problems.decorations.enabled": true,
+    // Breadcrumbs
+    "breadcrumbs.enabled": true,
+    "breadcrumbs.showFiles": true,
+    "breadcrumbs.showModules": true,
+    // Explorer
+    "explorer.confirmDelete": true,
+    "explorer.confirmDragAndDrop": true,
+    // Workbench
+    "workbench.editor.enablePreview": false,
+    "workbench.editor.enablePreviewFromQuickOpen": false,
+    "workbench.startupEditor": "readme",
+    // Icon Theme
+    "workbench.iconTheme": "vscode-icons",
+    // Auto Save
+    "files.autoSave": "afterDelay",
+    "files.autoSaveDelay": 1000,
+    // Emmet
+    "emmet.includeLanguages": {
+        "razor": "html",
+        "cshtml": "html"
+    },
+    "dotnet.completion.showCompletionItemsFromUnimportedNamespaces": true,
+    "dotnet.formatting.organizeImportsOnFormat": true,
+    "dotnet.unitTestDebugging.enableCodeLens": true,
+    "docwriter.language": "Turkish",
+    // C# Extension
+    "csharp.debug.console": "integratedTerminal",
+    "csharp.semanticHighlighting.enabled": true,
+    "csharp.suppressDotnetInstallWarning": true,
+    "csharp.suppressBuildAssetsNotification": true,
+    // NetCoreDbg Configuration (for Cursor IDE)
+    // NOT: Bu ayarlar kullanıcıya özeldir, her geliştirici kendi User Settings'inde tanımlamalıdır
+    // Cursor IDE: Cmd+Shift+P > "Preferences: Open User Settings (JSON)" ile açıp ekleyin:
+    // "netcoredbg.debuggerPath": "${env:HOME}/.local/bin/netcoredbg",
+    // "dotnet.debuggerPath": "${env:HOME}/.local/bin/netcoredbg",
+    // Razor Hot Reload
+    "razor.format.enable": true,
+    "razor.languageServer.debug": false,
+    "razor.trace.server": "Off",
+    // ASP.NET Core Hot Reload
+    "aspnetcore.enableRequestLogging": false,
+    "aspnetcore.enableDetailedErrors": true
+}

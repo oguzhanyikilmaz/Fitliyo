@@ -1,0 +1,91 @@
+---
+description: "Görev yürütme akışı, belirsizlik yönetimi ve güvenli çalışma kuralları"
+globs:
+alwaysApply: true
+---
+
+# Görev Yürütme Akışı
+
+## Standart Çalışma Akışı (4 Adım)
+
+Her görev aşağıdaki sırayla yürütülür:
+
+1. **Oku** → İlgili kodu, dokümantasyonu, test dosyalarını oku. Mevcut yapıyı anla.
+2. **Planla** → Yapılacakları listele, etki analizi yap, bağımlılıkları belirle.
+3. **Kontrol Et** → Planın mevcut kalıplara (CLAUDE.md, skills, Cursor rules) uygunluğunu doğrula.
+4. **Uygula** → Kod + test + dokümantasyon birlikte yaz. Sonra build ve test kontrolleri.
+
+**Önemli**: Körü körüne kod yazmaya başlama. Önce oku ve anla.
+
+## Belirsizlik Yönetimi
+
+- **Emin değilsen tahmin etme, sor.** Yarım bilgiyle hareket etmektense doğru bilgiyi al.
+- **API sözleşmesi asla tahmin edilmez** → `docs/openapi/swagger.web.v1.full.json` kontrol et.
+- **DTO yapısı belirsizse** → Swagger'dan doğrula, yoksa kullanıcıya sor.
+- **Mimari karar gerekiyorsa** → Mevcut pattern'leri incele, alternatifleri sun, kullanıcıya karar verdirt.
+
+```
+✅ "Bu endpoint'in dönüş tipi konusunda emin değilim. Swagger kontrol edeyim."
+✅ "Bu değişikliğin frontend'i etkileyip etkilemeyeceğini doğrulamam gerekiyor."
+❌ "Muhtemelen bu DTO'da UserId alanı vardır" → tahmine dayalı kod yazma
+```
+
+## Kullanıcı Kodu ve Kararlarına Saygı
+
+### Asla Geri Alma
+- Kullanıcının yaptığı değişiklikleri, commit'leri, branch'leri **asla geri alma**.
+- Çakışma varsa kullanıcıya sor, kendi başına karar verme.
+- `git checkout .`, `git reset --hard`, `git clean -fd` → yalnızca açık kullanıcı isteği ile.
+
+### Tooling Kararları
+- Kullanıcının tercih ettiği araç/framework/kütüphane kararlarını değiştirme.
+- Mevcut tooling'i kendi tercihinle değiştirme (ör. npm → yarn, Jest → Vitest).
+- Proje yapısını koruyarak çalış.
+
+## Uygulama Tamlığı
+
+- **Placeholder/TODO bırakma**: Her değişiklik tam ve çalışır durumda olmalı.
+- **"Sonra yapılacak" bırakılmaz**: Exception handling, cache invalidation, logging, test — hepsi aynı anda.
+- **Yarım bırakma**: Bir AppService metodu yazıyorsan, aynı commit'te testi de yazılmalı.
+
+```csharp
+// ❌ YASAK — placeholder
+public async Task<OrderDto> CreateAsync(CreateOrderDto input)
+{
+ // TODO: Validation eklenecek
+ // TODO: Cache invalidation eklenecek
+ var entity = new Order(...);
+ await _repository.InsertAsync(entity);
+ return ObjectMapper.Map<Order, OrderDto>(entity);
+}
+
+// ✅ DOĞRU — tam implementasyon
+public async Task<OrderDto> CreateAsync(
+ CreateOrderDto input, CancellationToken ct = default)
+{
+ await ValidatePackageAvailabilityAsync(input.ServicePackageId);
+ var orderNumber = await GenerateOrderNumberAsync();
+ var entity = new Order(GuidGenerator.Create(), orderNumber, CurrentUser.GetId(), input.ServicePackageId);
+ await _repository.InsertAsync(entity, cancellationToken: ct);
+ await _cache.RemoveAsync(GetListCacheKey());
+ Logger.LogInformation("Sipariş oluşturuldu. Id: {Id}, OrderNumber: {OrderNumber}", entity.Id, orderNumber);
+ return ObjectMapper.Map<Order, OrderDto>(entity);
+}
+```
+
+## Proaktif Bug Fix
+
+- Dosyaya dokunurken veya kod okurken tespit edilen bug'lar **kullanıcıdan onay beklenmeden hemen düzeltilir**.
+- NullReferenceException, P9, P12, güvenlik açığı vb. hepsi dahil.
+- Bug'ın ne olduğu ve nasıl düzeltildiği değişiklik özetinde belirtilir.
+
+## Inspect Before Acting
+
+- Destructive işlem öncesi mevcut durumu kontrol et.
+- Merge/deploy/debug öncesi son durumu incele.
+- Bilinmeyen dosya/branch/config bulursan → sil değil, araştır (kullanıcının devam eden çalışması olabilir).
+
+## Referanslar
+
+- [Çalışma Akışı Skill](../../.claude/skills/workflow-practices/SKILL.md) — detaylı çalışma akışı kuralları
+- [Tüm Kurallar](../../.claude/skills/workflow-practices/references/rules.md) — örneklerle birlikte

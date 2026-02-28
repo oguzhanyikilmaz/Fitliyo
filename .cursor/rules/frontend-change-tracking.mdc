@@ -1,0 +1,137 @@
+---
+description: "Frontend ekibini etkileyen değişikliklerin otomatik takip kuralı ve standart formatı"
+globs:
+alwaysApply: true
+---
+
+# Frontend Değişiklik Takip Sistemi (ZORUNLU)
+
+## Temel Kural
+
+**Her commit'te** **Next.js frontend ekibini** etkileyen bir değişiklik varsa, `docs/frontend-changes/` klasörüne ayrı bir dosya olarak **zorunlu** eklenir.
+
+**KAPSAM (KRİTİK):** Bu klasör **YALNIZCA Next.js frontend ekibini ilgilendiren** API/DTO/SignalR değişiklikleri içindir.
+
+Commit'ten sonra şu soru sorulmalı:
+> "Bu değişiklik **Next.js frontend'ini** etkiliyor mu?"
+> Evet ise → yeni dosya oluşturulur + index güncellenir.
+
+### Bu klasöre EKLENMEyecek değişiklikler:
+- MVC Razor Pages (`.cshtml`, `.cshtml.cs`) değişiklikleri
+- MVC JavaScript dosyaları (`src/Fitliyo.Web/Pages/**/*.js`) değişiklikleri
+- Sadece backend iç yapı değişiklikleri (refactoring, cache, Hangfire job altyapısı)
+- Sadece backend'i etkileyen permission/kod düzeltmeleri
+- Backend kod kalitesi iyileştirmeleri (nullable, naming, unused import)
+
+### Bu klasöre EKLENECEK değişiklikler:
+- Next.js'in tükettiği API endpoint değişiklikleri (yeni/değişen/silinen)
+- DTO/Model değişiklikleri (alan ekleme/silme/tip değişimi)
+- Response format değişiklikleri
+- Yeni SignalR channel/event tanımları
+- Permission string değişiklikleri (Next.js'te kullanılan)
+- Dinamik alan eklemeleri (SetProperty, ExtraProperties)
+- Error format değişiklikleri
+
+## Klasör Yapısı
+
+```
+docs/frontend-changes/
+├── README.md                          # Index + format standardı
+├── _archive-before-2026-02-18.md      # Eski girişler (tek dosya dönemi)
+├── 2026-02-18-1.md                    # Her giriş ayrı dosya
+├── 2026-02-18-2.md
+└── ...
+```
+
+## Dosya Adı Formatı (ZORUNLU)
+
+```
+YYYY-MM-DD-N.md
+```
+
+- `YYYY-MM-DD`: Tarih (ISO 8601)
+- `N`: O gün içindeki sıra numarası (1'den başlar)
+
+**Sıra numarası belirleme:** `docs/frontend-changes/` klasöründeki mevcut dosyaları kontrol et. Aynı tarihteki en son N'yi bul, +1 yap.
+
+**Örnekler:**
+- `2026-02-18-1.md` → 18 Şubat'ın 1. girişi
+- `2026-02-18-2.md` → 18 Şubat'ın 2. girişi
+- `2026-02-19-1.md` → 19 Şubat'ın 1. girişi
+
+## Dosya İçerik Şablonu (ZORUNLU)
+
+Her `YYYY-MM-DD-N.md` dosyası şu yapıda olmalı:
+
+```markdown
+# [BADGE] Kısa Başlık
+
+- **ID**: YYYY-MM-DD-N
+- **Tarih**: YYYY-MM-DD
+- **Etkilenen**: endpoint / DTO / permission listesi
+- **Değişiklik Tipi**: Badge + açıklama
+- **Açıklama**: Ne değişti (kısa ve net)
+- **İstemcinin Yapması Gerekenler**: Aksiyon adımları veya "Yok — backend tarafında tamamlandı."
+- **Detaylar**: [İlgili Doküman](../dosya.md) (varsa)
+
+---
+
+(Gerekirse ek açıklamalar, tablo, endpoint geçiş tablosu, örnek request/response)
+```
+
+## Değişiklik Tipi Badge'leri
+
+| Badge | Anlamı | Açıklama |
+|-------|--------|----------|
+| `⚠️ BREAKING` | Breaking Change | Frontend'in kod değiştirmesi ZORUNLU |
+| `🟢 NON-BREAKING` | Non-breaking | Frontend'in bir şey yapmasına gerek yok |
+| `🐛 BUG FIX` | Hata düzeltme | Mevcut bir sorun giderildi |
+| `📄 DOKÜMAN` | Sadece dokümantasyon | Yeni iş planı, API dokümanı vb. |
+| `🔧 ALTYAPI` | Altyapı değişikliği | Deployment, CI/CD, config |
+
+## Yeni Giriş Ekleme Adımları (ZORUNLU)
+
+1. `docs/frontend-changes/` klasöründe aynı tarihteki son dosyayı bul
+2. Sıra numarasını +1 yap → yeni dosya adı: `YYYY-MM-DD-N.md`
+3. Şablona uygun dosyayı oluştur
+4. `docs/frontend-changes/README.md` index listesinin **en üstüne** yeni girişi ekle
+5. `docs/CHANGELOG.md` güncelle (özet + link)
+
+## Hangi Değişiklikler Takip Edilir?
+
+**Kriter:** "Next.js frontend kodu bu değişiklik yüzünden güncellenmeli mi?"
+
+| Değişiklik Türü | Örnek | Takip edilir mi? |
+|------------------|-------|------------------|
+| Yeni API endpoint | `POST /api/app/service-package` | ✅ Evet |
+| Endpoint değişikliği | Route, method, response format | ✅ Evet |
+| Endpoint kaldırma | Deprecated endpoint silindi | ✅ Evet |
+| DTO alan ekleme/silme | `UserDto`'ya/dan alan eklendi/kaldırıldı | ✅ Evet |
+| DTO alan tipi değişimi | `string` → `Guid` | ✅ Evet |
+| Response format değişimi | Düz string → JSON objesi | ✅ Evet |
+| Yeni SignalR channel/event | `SgkImportProgress` event eklendi | ✅ Evet |
+| Permission string değişimi | Next.js'te kullanılan permission | ✅ Evet |
+| Dinamik alan ekleme | `SetProperty()` ile eklenen alanlar | ✅ Evet |
+| Error format değişimi | Hata kodu/mesajı değişikliği | ✅ Evet |
+| Yeni frontend iş planı | `docs/*_FRONTEND_PLANI.md` | ✅ Evet |
+| MVC Razor Pages değişikliği | `.cshtml`, `.cshtml.cs` düzenleme | ❌ Hayır |
+| MVC JavaScript değişikliği | `src/Fitliyo.Web/Pages/**/*.js` | ❌ Hayır |
+| Backend iç yapı | Refactoring, cache, Hangfire altyapı | ❌ Hayır |
+| Backend kod kalitesi | Nullable fix, naming, unused import | ❌ Hayır |
+| Sadece backend permission fix | MVC JS'teki permission string düzeltmesi | ❌ Hayır |
+
+## Commit Sonrası Kontrol Listesi
+
+1. Bu commit **Next.js frontend'ini** etkiliyor mu? (MVC değişiklikleri sayılmaz!)
+2. Evet ise → `docs/frontend-changes/YYYY-MM-DD-N.md` oluşturuldu mu?
+3. `docs/frontend-changes/README.md` index güncellendi mi?
+4. Badge doğru mu? (breaking/non-breaking/bug fix)
+5. "İstemcinin Yapması Gerekenler" bölümü net mi?
+6. `docs/CHANGELOG.md` da güncellendi mi?
+
+## Referanslar
+
+- [`docs/frontend-changes/README.md`](../../docs/frontend-changes/README.md) — Index ve format standardı
+- [`docs/frontend-changes/_archive-before-2026-02-18.md`](../../docs/frontend-changes/_archive-before-2026-02-18.md) — Eski girişler
+- [`docs/BACKEND_CHANGES_FOR_FRONTEND_TEAM.md`](../../docs/BACKEND_CHANGES_FOR_FRONTEND_TEAM.md) — Yönlendirme dosyası
+- [`.cursor/rules/documentation-rules.mdc`](documentation-rules.mdc) — Bölüm 11

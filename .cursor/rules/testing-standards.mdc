@@ -1,0 +1,374 @@
+---
+description: "Test standartları — her yeni AppService metodu için hemen test yazılır"
+globs:
+  - "src/Fitliyo.Application/**/*.cs"
+  - "test/Fitliyo.Application.Tests/**/*.cs"
+alwaysApply: true
+---
+
+# Test Standartları (ZORUNLU)
+
+## TEMEL KURAL — Her Metot İçin Hemen Test
+
+**Yeni AppService metodu eklendiğinde veya değiştirildiğinde, aynı PR/commit içinde test yazılması ZORUNLUDUR.**
+
+- Yeni bir `AppService` metodu → ilgili `*_Tests.cs` dosyasına aynı anda test eklenir
+- Mevcut bir metot değiştirildi → testi güncellenir
+- Test olmayan kod **merge edilmez**
+
+---
+
+## Test Sınıfı Yapısı
+
+```csharp
+namespace Fitliyo.Application.Tests.<Modül>
+
+public class XxxAppService_Tests : FitliyoApplicationTestBase<FitliyoApplicationTestModule>
+{
+    private readonly IXxxAppService _xxxAppService;
+
+    public XxxAppService_Tests()
+    {
+        _xxxAppService = GetRequiredService<IXxxAppService>();
+    }
+
+    private static string UniqueCode(string prefix = "TEST") =>
+        $"{prefix}_{DateTime.Now.Ticks}".ToUpperInvariant()[..30];
+}
+```
+
+---
+
+## Minimum Test Kapsamı
+
+Her AppService için şunlar zorunludur:
+
+| # | Test | Öncelik |
+|---|------|---------|
+| 1 | `CreateAsync` — geçerli girdi | ZORUNLU |
+| 2 | `CreateAsync` — zorunlu alan boş → validation hatası | ZORUNLU |
+| 3 | `GetAsync` — mevcut kayıt | ZORUNLU |
+| 4 | `GetListAsync` — sayfalı liste | ZORUNLU |
+| 5 | `UpdateAsync` — başarılı güncelleme | ZORUNLU |
+| 6 | `DeleteAsync` — silme + DB kontrolü | ZORUNLU |
+| 7 | Her özel (custom) metot — happy path | ZORUNLU |
+
+---
+
+## AAA Paterni (Arrange-Act-Assert)
+
+```csharp
+[Fact]
+public async Task Should_Create_ServicePackage()
+{
+ // Arrange
+ var input = new CreateUpdateServicePackageDto
+ {
+ Title = "Test Paket " + Guid.NewGuid().ToString("N")[..8],
+ PackageType = PackageType.SingleSession,
+ Price = 500m,
+ SessionDurationMinutes = 60,
+ IsActive = true
+ };
+
+ // Act
+ var result = await _servicePackageAppService.CreateAsync(input);
+
+ // Assert
+ result.ShouldNotBeNull();
+ result.Id.ShouldNotBe(Guid.Empty);
+ result.Title.ShouldBe(input.Title);
+}
+```
+
+---
+
+## Assertion — Shouldly Kullan
+
+```csharp
+result.ShouldNotBeNull();
+result.Id.ShouldNotBe(Guid.Empty);
+result.Name.ShouldBe(input.Name);
+result.Items.Count.ShouldBeGreaterThan(0);
+result.Items.ShouldAllBe(x => x.IsActive);
+
+// Hata testi
+await Assert.ThrowsAsync<AbpValidationException>(...);
+await Assert.ThrowsAnyAsync<Exception>(...);
+```
+
+---
+
+## Test Veri Kuralları
+
+- Gerçek veritabanı kullanılır → her test **benzersiz** veri üretmeli
+- `TestUserId`, `TestSubTenantId`, `TestCompanyId` → `FitliyoApplicationTestBase` üzerinden
+- `HasResolvedData` → false ise testi atla: `if (!HasResolvedData) return;`
+- Helper metodlar için try-catch + Debug.WriteLine kullan
+
+---
+
+## Yasak Pratikler
+
+- `Thread.Sleep()` test içinde yasak
+- `true.ShouldBeTrue()` gibi anlamsız assertion yasak
+- Sabit Guid.Empty ID'si kullanma (DB'de olmaz)
+- Testler arası bağımlılık yasak (her test bağımsız)
+- `DateTime.UtcNow` yasak → `DateTime.Now` kullan
+- **Hata yoksayma yerine gerçek assertion yaz** — `catch (Exception) { }` ile hatayı yutmak YASAK, kök nedeni çöz
+- Test hatasını `try-catch` ile gizleme, `if (!HasResolvedData) return;` ile atlama ancak seed verisi yoksa geçerli; seed verisi varsa testin çalışıp gerçek assertion yapması ZORUNLU
+
+---
+
+## Yaygın Test Hatası Önleme Kuralları
+
+Bu kurallar, tekrar eden test hatalarını önlemek için **zorunlu** uygulanır.
+
+### 1) Tarih/Tarih Aralığı Çakışması (Session, Order vb.)
+
+**Sorun:** Sabit tarih aralıkları (`DateTime.Today.AddDays(30)`) kullanıldığında testler paralel veya sıralı çalışınca "Bu tarihte zaten seans planlanmış" benzeri BusinessException oluşur.
+
+**Çözüm:** Her test çalışmasında benzersiz tarih aralığı üret.
+
+```csharp
+private static (DateTime Start, DateTime End) UniqueSessionDates(int baseDaysAhead, int durationMinutes = 60)
+{
+ var offset = Math.Abs((int)(DateTime.Now.Ticks % 10000));
+ var start = DateTime.Today.AddDays(baseDaysAhead + offset).AddHours(10);
+ return (start, start.AddMinutes(durationMinutes));
+}
+```
+
+- `baseDaysAhead` farklı testlerde farklı değer almalı (örn. 400, 500, 600) — çakışma önlenir
+- `DateTime.Now.Ticks` ile her çalışmada farklı offset
+
+### 2) Yetkilendirme Gerektiren Testler (GetAsync, Create, Update vb.)
+
+**Sorun:** `[Authorize]` veya ownership kontrolü gerektiren metodlar test edilirken `AbpAuthorizationException` oluşur.
+
+**Çözüm:** Test sınıfı `AuthorizationTestBase`'den türet, metodları `RunAsUserAsync` ile sarma.
+
+```csharp
+public class OrderAppService_Tests : AuthorizationTestBase
+{
+ private TestUserContext TestUserAsAdmin =>
+ TestUserContext.CreateAdmin(TestUserId);
+
+ private TestUserContext TestUserAsTrainer =>
+ TestUserContext.CreateTrainer(TestTrainerId);
+
+ [Fact]
+ public async Task Should_Create_Order()
+ {
+ if (!HasResolvedData) return;
+ await RunAsUserAsync(TestUserAsStudent, async () =>
+ {
+ // Test kodu burada
+ });
+ }
+}
+```
+
+- Admin işlemleri için `TestUserContext.CreateAdmin`
+- Eğitmen kendi verisi için `TestUserContext.CreateTrainer`
+- Öğrenci işlemleri için `TestUserContext.CreateStudent`
+
+### 3) FK ve Zorunlu Alanlar (Bank, Country vb.)
+
+**Sorun:** `CreateUpdateXxxDto` içinde FK (örn. `CountryId`) zorunlu; TestDataSeeder'da yoksa test başarısız olur.
+
+**Çözüm:** `FitliyoApplicationTestBase` üzerinden `GetOrCreateCountryIdAsync()` veya `TestCountryId` kullan.
+
+```csharp
+var countryId = await GetOrCreateCountryIdAsync();
+if (countryId == Guid.Empty) return;
+var input = new CreateUpdateBankDto { CountryId = countryId, ... };
+```
+
+### 4) UpdateAsync — ConcurrencyStamp Zorunluluğu
+
+**Sorun:** ABP `UpdateAsync` için `ConcurrencyStamp` gerektirir; Create sonrası alınan DTO'daki değer updateDto'ya aktarılmazsa hata oluşur.
+
+**Çözüm:** Update testinde `updateDto.ConcurrencyStamp = created.ConcurrencyStamp` ata.
+
+```csharp
+var created = await CreateTestBankAsync();
+var updateDto = new CreateUpdateBankDto { ... };
+updateDto.ConcurrencyStamp = created.ConcurrencyStamp;
+```
+
+### 5) Nullable Olmayan Alanlar (SwiftCode vb.)
+
+**Sorun:** Sorgu/filtre `IsActive` veya benzeri alanlarla çalışıyorsa, entity'de nullable olmayan alanların set edilmesi gerekir; aksi halde DB/EF hatası oluşabilir.
+
+**Çözüm:** Test verisi oluştururken ilgili entity'nin tüm zorunlu alanlarını doldur (örn. `SwiftCode` için benzersiz değer).
+
+### 6) Hata Yoksayma Yerine Gerçek Assertion (KRİTİK)
+
+**Sorun:** Test içinde `try-catch` ile exception yakalanıp `true.ShouldBeTrue()` yazılması — test her zaman geçer, gerçek hata gizlenir.
+
+**Çözüm:** Exception'ı yoksaymak yerine **kök nedeni düzelt**. Test verisi eksikse seeder'ı düzelt, yetkilendirme hatası varsa context'i düzelt.
+
+**YASAK pattern'ler:**
+```csharp
+// YASAK — hata yutma + sahte assertion
+try { var result = await _service.DoSomethingAsync(id); }
+catch { }
+true.ShouldBeTrue(); // Her zaman geçer, test değersiz
+
+// YASAK — catch ile beklentiyi düşürme
+try { result.ShouldBe(expected); }
+catch (Exception) { /* "bazen hata olabilir" */ }
+```
+
+**DOĞRU pattern:**
+```csharp
+// Gerçek assertion — hata varsa test BAŞARISIZ olmalı
+var result = await _service.DoSomethingAsync(id);
+result.ShouldNotBeNull();
+result.Value.ShouldBe(expected);
+```
+
+### 7) Test Verisi TestDataSeeder'da Tanımlı Olmalı (KRİTİK)
+
+**Sorun:** Testler, veritabanında olmayan FK referans entity'lerine bağımlı olduğunda sessizce başarısız olur veya `HasResolvedData` false döner.
+
+**Çözüm:** FK bağımlılıkları (Country, Province, District, Bank, Company, SubTenant, User, AssetCategory, AssetStatus) `TestDataSeeder.cs`'de tanımlı olmalı.
+
+**Enrichment entity'leri (UserFinanceInfo, UserAddress, UserEducation vb.) seed'e EKLENMEMELİ** — çünkü Create testleriyle çakışma yaratır (duplicate check).
+
+**Kural:**
+- Yalnızca FK referans verileri seed'e eklenir
+- Her seed edilen FK referans entity için `ResolvedXxxId` static property tanımlanmalı
+- `FitliyoApplicationTestBase`'de `TestXxxId` olarak expose edilmeli
+
+### 8) Test İzolasyonu — Kendi Verisini Oluştur (KRİTİK)
+
+**Sorun:** Paylaşılan SQLite in-memory DB'de seeded veri diğer testlerce silinebilir/değişebilir. `GetListAsync` ile mevcut assignment/asset arama → başka test silmişse boş döner.
+
+**Çözüm:** Her test kendi verisini `CreateFreshXxxAsync()` helper ile oluştursun.
+
+```csharp
+// YASAK — paylaşılan veriye bağımlı
+private async Task<Guid> GetAssetAssignmentIdAsync()
+{
+    var list = await _assignmentService.GetListAsync(new ... { MaxResultCount = 1 });
+    return list.Items.Count > 0 ? list.Items[0].Id : Guid.Empty;
+}
+
+// DOĞRU — her test kendi verisini oluşturur
+private async Task<Guid> CreateFreshAssetAssignmentAsync()
+{
+    var asset = await _assetAppService.CreateAsync(new CreateUpdateAssetDto { ... });
+    var assignment = await _assignmentAppService.CreateAsync(new CreateAssetAssignmentDto
+    {
+        AssetId = asset.Id, UserId = TestUserId, AssignmentDate = DateTime.Now
+    });
+    return assignment.Id;
+}
+```
+
+### 9) Entity Constructor — TÜM NOT NULL Alanları Doldur (KRİTİK)
+
+**Sorun:** C# constructor'da `nullable`/`default` parametreler SQLite'ta NOT NULL constraint ile eşlenebilir. Constructor'daki default değer DB'de NOT NULL kolona karşılık gelir → SQLite Error 19.
+
+**Çözüm:** Test entity oluştururken constructor'ın TÜM parametrelerini kontrol et, hepsini doldur.
+
+Bilinen zorunlu alanlar:
+- `Order.OrderNumber` → `orderNumber: "ORD-TEST001"`
+- `Order.Currency` → `Currency = "TRY"`
+- `TrainerProfile.Slug` → `slug: "test-trainer-" + Guid.NewGuid().ToString("N")[..8]`
+- `ServicePackage.Title` → `title: "Test Paket"`
+
+### 10) SQLite — autoSave: true Kullan (KRİTİK)
+
+**Sorun:** Repository `InsertAsync` çağrılarında `autoSave: true` kullanılmazsa SQLite `active statements` hatası verir (Error 5: 'unable to delete/modify user-function due to active statements').
+
+**Çözüm:** Test helper'larında birden fazla sıralı insert varsa **her birine `autoSave: true`** ekle.
+
+```csharp
+// YASAK — SQLite Error 5 riski
+await _repository.InsertAsync(entity1);
+await _repository.InsertAsync(entity2);
+
+// DOĞRU
+await _repository.InsertAsync(entity1, autoSave: true);
+await _repository.InsertAsync(entity2, autoSave: true);
+```
+
+### 11) SubTenantId — IdentityUser ExtraProperties (KRİTİK)
+
+**Sorun:** `SubTenantAutoSetterInterceptor`, `IHasUserId` entity'lere SubTenantId atarken `user.GetSubTenantId()` → `ExtraProperties["SubTenantId"]` okur. Test kullanıcısında bu set edilmemişse interceptor `null` atar → data filter entity'yi bulamaz.
+
+**Çözüm:** Test kullanıcısı oluştururken `user.SetSubTenantId(subTenantId)` çağır.
+
+```csharp
+var user = new IdentityUser(userId, "testuser", "test@test.com");
+user.SetIdentityNumber("10000000146");
+user.SetSubTenantId(ResolvedSubTenantId.Value); // KRİTİK
+await _identityUserManager.CreateAsync(user, "Test1234!");
+```
+
+---
+
+## Test Dosyası Konumu
+
+```
+src/Fitliyo.Application/<Modül>/XxxAppService.cs
+→ test/Fitliyo.Application.Tests/<Modül>/XxxAppService_Tests.cs
+```
+
+---
+
+## Dokümantasyon
+
+Her AppService için test durumu `docs/tests/<Modül>.md` dosyasına kaydedilir.
+
+Referans: `docs/testing-standards.md`
+
+---
+
+## Endpoint Değişiklik Kontrolü (KRİTİK — Commit Öncesi ZORUNLU)
+
+**Her endpoint (AppService metodu) yazıldığında, değiştirildiğinde veya silindiğinde aşağıdaki kontroller ZORUNLU uygulanır.**
+
+### Kontrol Akışı
+
+Bir `XxxAppService` dosyası değiştiğinde:
+
+1. **AppService Dokümantasyonunu Kontrol Et**
+   - `docs/app-services/<XxxAppService>.md` → metot, yetki matrisi, endpoint listesi güncel mi?
+
+2. **Test Dokümantasyonunu Kontrol Et**
+   - `docs/tests/<Modül>.md` → kapsam tablosu ve TC senaryoları güncel mi?
+
+3. **Test Dosyalarını Kontrol Et**
+   - `test/Fitliyo.Application.Tests/<Modül>/<XxxAppService>_Tests.cs` → her yeni/değişen metot için test var mı?
+
+4. **Eksikleri Gider**
+   - Test eksikse → test yaz
+   - Test doku eksikse → `docs/tests/<Modül>.md` güncelle
+   - AppService doku eksikse → `python3 scripts/generate_appservice_docs.py` çalıştır
+   - Referans path eksikse → `python3 scripts/add_test_refs_to_appservice_docs.py` çalıştır
+
+### Hızlı Referans Tablosu
+
+| Değişiklik | AppService Doc | Test Doc | Test Kodu | CHANGELOG |
+|------------|---------------|----------|-----------|-----------|
+| Yeni metot eklendi | ✅ Güncelle | ✅ TC ekle | ✅ Test yaz | ✅ Ekle |
+| Metot değiştirildi | ✅ Güncelle | ✅ TC güncelle | ✅ Test güncelle | ✅ Ekle |
+| Metot silindi | ✅ Güncelle | ✅ TC kaldır | ✅ Test kaldır | ✅ Ekle |
+| DTO değişti | ✅ Model güncelle | ✅ TC kontrol | ✅ Test kontrol | ✅ Ekle |
+| Yetki değişti | ✅ Matris güncelle | ✅ TC kontrol | ✅ Auth test kontrol | ✅ Ekle |
+
+### Test & Dokümantasyon Referans Path'leri
+
+Her AppService dokümanının Referanslar bölümünde test dosyaları ve test dokümantasyonu path'leri yer alır:
+- **AppService dokümantasyonu:** `docs/app-services/<XxxAppService>.md`
+- **Test dokümantasyonu:** `docs/tests/<Modül>.md`
+- **Test dosyaları:** `test/Fitliyo.Application.Tests/<Modül>/<XxxAppService>_Tests.cs`
+
+### Skill Referansları
+
+- [Test Standartları Skill](../../.claude/skills/testing-standards/SKILL.md) — test kuralları özeti ve yaygın hatalar
+- [Detaylı Kurallar](../../.claude/skills/testing-standards/references/rules.md) — Doğru/Yanlış örnekler

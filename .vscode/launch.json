@@ -1,0 +1,252 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Fitliyo Web (Debug)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-web",
+            "program": "${workspaceFolder}/src/Fitliyo.Web/bin/Debug/net9.0/Fitliyo.Web.dll",
+            "cwd": "${workspaceFolder}/src/Fitliyo.Web",
+            "console": "integratedTerminal",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "https://localhost:44332;http://localhost:44331"
+            },
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+            }
+        },
+        {
+            "name": "Fitliyo Mobile API (Debug)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-mobile-api",
+            "program": "${workspaceFolder}/src/Fitliyo.HttpApi.Host.Mobile/bin/Debug/net9.0/Fitliyo.HttpApi.Host.Mobile.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Fitliyo.HttpApi.Host.Mobile",
+            "stopAtEntry": false,
+            "console": "integratedTerminal",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "https://localhost:44335;http://localhost:44336"
+            }
+        },
+        {
+            "name": "Fitliyo Consumer (Debug)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-consumer",
+            "program": "${workspaceFolder}/src/Fitliyo.Consumer/bin/Debug/net9.0/Fitliyo.Consumer.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Fitliyo.Consumer",
+            "stopAtEntry": false,
+            "console": "integratedTerminal",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        },
+        {
+            "name": "Fitliyo DbMigrator",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-dbmigrator",
+            "program": "${workspaceFolder}/src/Fitliyo.DbMigrator/bin/Debug/net9.0/Fitliyo.DbMigrator.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Fitliyo.DbMigrator",
+            "stopAtEntry": false,
+            "console": "integratedTerminal",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        },
+        {
+            "name": "Fitliyo Tests",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "dotnet",
+            "args": [
+                "test",
+                "${workspaceFolder}/test/Fitliyo.Application.Tests/Fitliyo.Application.Tests.csproj"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Test"
+            }
+        },
+        {
+            "name": ".NET Core Attach",
+            "type": "coreclr",
+            "request": "attach"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Fitliyo Web + Consumer (Debug)",
+            "configurations": [
+                "Fitliyo Web (Debug)",
+                "Fitliyo Consumer (Debug)"
+            ],
+            "stopAll": true,
+            "presentation": {
+                "hidden": false,
+                "group": "Fitliyo Debug",
+                "order": 1
+            }
+        },
+        {
+            "name": "Fitliyo Web + Mobile API (Debug)",
+            "configurations": [
+                "Fitliyo Web (Debug)",
+                "Fitliyo Mobile API (Debug)"
+            ],
+            "stopAll": true,
+            "presentation": {
+                "hidden": false,
+                "group": "Fitliyo Debug",
+                "order": 2
+            }
+        },
+        {
+            "name": "Fitliyo Full Stack (Debug)",
+            "configurations": [
+                "Fitliyo Web (Debug)",
+                "Fitliyo Mobile API (Debug)",
+                "Fitliyo Consumer (Debug)"
+            ],
+            "stopAll": true,
+            "presentation": {
+                "hidden": false,
+                "group": "Fitliyo Debug",
+                "order": 3
+            }
+        }
+    ]
+}
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Fitliyo Web (Debug)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-web",
+            "program": "${workspaceFolder}/src/Fitliyo.Web/bin/Debug/net9.0/Fitliyo.Web.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Fitliyo.Web",
+            "stopAtEntry": false,
+            "console": "integratedTerminal",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "https://localhost:44332;http://localhost:44331"
+            }
+        },
+        {
+            "name": "Fitliyo Mobile API (Debug)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-mobile-api",
+            "program": "${workspaceFolder}/src/Fitliyo.HttpApi.Host.Mobile/bin/Debug/net9.0/Fitliyo.HttpApi.Host.Mobile.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Fitliyo.HttpApi.Host.Mobile",
+            "stopAtEntry": false,
+            "console": "integratedTerminal",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "https://localhost:44335;http://localhost:44336"
+            }
+        },
+        {
+            "name": "Fitliyo Consumer (Debug)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-consumer",
+            "program": "${workspaceFolder}/src/Fitliyo.Consumer/bin/Debug/net9.0/Fitliyo.Consumer.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Fitliyo.Consumer",
+            "stopAtEntry": false,
+            "console": "integratedTerminal",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        },
+        {
+            "name": "Fitliyo DbMigrator",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-dbmigrator",
+            "program": "${workspaceFolder}/src/Fitliyo.DbMigrator/bin/Debug/net9.0/Fitliyo.DbMigrator.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Fitliyo.DbMigrator",
+            "stopAtEntry": false,
+            "console": "integratedTerminal",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        },
+        {
+            "name": "Fitliyo Tests",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "dotnet",
+            "args": [
+                "test",
+                "${workspaceFolder}/test/Fitliyo.Application.Tests/Fitliyo.Application.Tests.csproj"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Test"
+            }
+        },
+        {
+            "name": ".NET Core Attach",
+            "type": "coreclr",
+            "request": "attach"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Fitliyo Web + Consumer (Debug)",
+            "configurations": [
+                "Fitliyo Web (Debug)",
+                "Fitliyo Consumer (Debug)"
+            ],
+            "stopAll": true,
+            "presentation": {
+                "hidden": false,
+                "group": "Fitliyo Debug",
+                "order": 1
+            }
+        },
+        {
+            "name": "Fitliyo Web + Mobile API (Debug)",
+            "configurations": [
+                "Fitliyo Web (Debug)",
+                "Fitliyo Mobile API (Debug)"
+            ],
+            "stopAll": true,
+            "presentation": {
+                "hidden": false,
+                "group": "Fitliyo Debug",
+                "order": 2
+            }
+        },
+        {
+            "name": "Fitliyo Full Stack (Debug)",
+            "configurations": [
+                "Fitliyo Web (Debug)",
+                "Fitliyo Mobile API (Debug)",
+                "Fitliyo Consumer (Debug)"
+            ],
+            "stopAll": true,
+            "presentation": {
+                "hidden": false,
+                "group": "Fitliyo Debug",
+                "order": 3
+            }
+        }
+    ]
+}

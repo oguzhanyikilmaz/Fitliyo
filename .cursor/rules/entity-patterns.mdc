@@ -1,0 +1,418 @@
+---
+description: "Entity, DTO, AppService ve EF Core scaffold pattern'leri"
+globs:
+  - "src/Fitliyo.Domain/**/*.cs"
+  - "src/Fitliyo.Application/**/*.cs"
+  - "src/Fitliyo.Application.Contracts/**/*.cs"
+  - "src/Fitliyo.EntityFrameworkCore/**/*.cs"
+alwaysApply: false
+---
+
+# Scaffold Pattern'leri (Backend — Marketplace)
+
+## 1) Entity Pattern
+
+```csharp
+using System;
+using System.ComponentModel.DataAnnotations;
+using Volo.Abp.Domain.Entities.Auditing;
+
+namespace Fitliyo.XxxEntities
+{
+    /// <summary>
+    /// {Türkçe açıklama}
+    /// </summary>
+    public class Xxx : FullAuditedAggregateRoot<Guid>
+    {
+        // --- İş alanları ---
+
+        /// <summary>
+        /// {Alan açıklaması}
+        /// </summary>
+        [Required]
+        [StringLength(XxxConsts.MaxTitleLength)]
+        public string Title { get; set; }
+
+        /// <summary>
+        /// EF Core için korumalı constructor
+        /// </summary>
+        protected Xxx()
+        {
+        }
+
+        /// <summary>
+        /// Yeni bir {entity} oluşturmak için constructor
+        /// </summary>
+        public Xxx(Guid id, string title) : base(id)
+        {
+            Title = title;
+        }
+    }
+}
+```
+
+**Kurallar:**
+- `FullAuditedAggregateRoot<Guid>` base class (soft delete + audit log otomatik)
+- `protected` boş constructor (EF Core için)
+- Public constructor ile zorunlu alanlar set edilir
+- Türkçe XML `<summary>` her public member'da
+- FK ilişkileri net tanımlanmalı (örn. `TrainerProfileId`, `StudentUserId`)
+
+### Sahiplik Desenleri
+
+| Desen | Kullanım | Örnek Entity |
+|-------|----------|-------------|
+| Trainer sahipliği | `Guid TrainerProfileId` FK | ServicePackage, TrainerCertificate, TrainerGallery |
+| Student sahipliği | `Guid StudentUserId` FK → AppUser | Order, Review |
+| User sahipliği | `Guid UserId` FK → AppUser | Notification, UserSubscription, Conversation |
+| İlişkisel | Birden fazla FK | Order (StudentUserId + TrainerProfileId + ServicePackageId) |
+
+## 2) Consts Pattern
+
+```csharp
+namespace Fitliyo.XxxEntities
+{
+    public static class XxxConsts
+    {
+        public const int MaxTitleLength = 256;
+        public const int MaxDescriptionLength = 2000;
+        public const int MaxSlugLength = 100;
+    }
+}
+```
+
+## 3) DTO Pattern — Read (XxxDto)
+
+```csharp
+using System;
+using Volo.Abp.Application.Dtos;
+
+namespace Fitliyo.Application.Contracts.XxxEntities.Dtos
+{
+    /// <summary>
+    /// {Entity} bilgilerini görüntülemek için kullanılan DTO
+    /// </summary>
+    public class XxxDto : EntityDto<Guid>
+    {
+        /// <summary>
+        /// {Alan açıklaması}
+        /// </summary>
+        public string Title { get; set; }
+
+        public string TrainerFullName { get; set; }
+    }
+}
+```
+
+## 4) DTO Pattern — Input (CreateUpdateXxxDto)
+
+```csharp
+using System;
+using System.ComponentModel.DataAnnotations;
+
+namespace Fitliyo.Application.Contracts.XxxEntities.Dtos
+{
+    /// <summary>
+    /// {Entity} oluşturma veya güncelleme için kullanılan DTO
+    /// </summary>
+    public class CreateUpdateXxxDto
+    {
+        /// <summary>
+        /// {Alan açıklaması}
+        /// </summary>
+        [Required]
+        [StringLength(XxxConsts.MaxTitleLength)]
+        public string Title { get; set; }
+    }
+}
+```
+
+**Kurallar:**
+- Read DTO: `EntityDto<Guid>` base class, ilişkili entity isimleri denormalize
+- Input DTO: Validation attribute'ları (`[Required]`, `[StringLength]`, `[Range]`)
+- Türkçe XML `<summary>` her property'de
+
+## 5) GetList DTO Pattern
+
+```csharp
+using System;
+using Volo.Abp.Application.Dtos;
+
+namespace Fitliyo.Application.Contracts.XxxEntities.Dtos
+{
+    public class GetXxxListDto : PagedAndSortedResultRequestDto
+    {
+        public string? Filter { get; set; }
+        public Guid? TrainerProfileId { get; set; }
+        public bool? IsActive { get; set; }
+    }
+}
+```
+
+## 6) AppService Pattern
+
+```csharp
+using System;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Logging;
+using Volo.Abp.Application.Dtos;
+using Volo.Abp.Application.Services;
+using Volo.Abp.Domain.Repositories;
+
+namespace Fitliyo.XxxEntities
+{
+    /// <summary>
+    /// {Entity} yönetimi için uygulama servisi
+    /// </summary>
+    [Authorize]
+    public class XxxAppService :
+        CrudAppService<Xxx, XxxDto, Guid, GetXxxListDto, CreateUpdateXxxDto>,
+        IXxxAppService
+    {
+        private readonly ILogger<XxxAppService> _logger;
+
+        public XxxAppService(
+            IRepository<Xxx, Guid> repository,
+            ILogger<XxxAppService> logger
+        ) : base(repository)
+        {
+            _logger = logger;
+
+            GetPolicyName = FitliyoPermissions.Xxx.View;
+            GetListPolicyName = FitliyoPermissions.Xxx.View;
+            CreatePolicyName = FitliyoPermissions.Xxx.Create;
+            UpdatePolicyName = FitliyoPermissions.Xxx.Edit;
+            DeletePolicyName = FitliyoPermissions.Xxx.Delete;
+        }
+
+        [Authorize(FitliyoPermissions.Xxx.Create)]
+        public override async Task<XxxDto> CreateAsync(CreateUpdateXxxDto input)
+        {
+            _logger.LogInformation("Yeni {EntityType} oluşturuluyor", "Xxx");
+
+            var entity = await base.CreateAsync(input);
+
+            return entity;
+        }
+
+        [AllowAnonymous]
+        public async Task<XxxDto> GetBySlugAsync(string slug)
+        {
+            _logger.LogInformation("{EntityType} slug ile getiriliyor: {Slug}", "Xxx", slug);
+
+            var entity = await Repository.FindAsync(x => x.Slug == slug);
+            if (entity == null)
+                throw new BusinessException(FitliyoDomainErrorCodes.EntityNotFound);
+
+            return ObjectMapper.Map<Xxx, XxxDto>(entity);
+        }
+    }
+}
+```
+
+**Kurallar:**
+- Class-level `[Authorize]` (policysiz — sadece authenticated)
+- Method-level `[Authorize(FitliyoPermissions.Xxx.Create)]` (policy ile)
+- Guest erişimli endpoint'ler `[AllowAnonymous]` ile işaretlenir
+- Constructor'da policy atamaları
+- Structured logging
+- Cache-first okuma, mutation sonrası invalidation
+- `BusinessException` / `UserFriendlyException` ile hata yönetimi
+
+## 6.1) Cache Stratejisi (Detaylı)
+
+### Cache Key Formatı
+
+```csharp
+private string GetCacheKey(Guid id)
+    => $"{nameof(Xxx)}:{id}";
+
+private string GetListCacheKey()
+    => $"{nameof(Xxx)}:list";
+
+private string GetBySlugCacheKey(string slug)
+    => $"{nameof(Xxx)}:slug:{slug}";
+```
+
+### Cache-First Pattern
+
+```csharp
+public async Task<XxxDto> GetAsync(Guid id, CancellationToken cancellationToken = default)
+{
+    var cacheKey = GetCacheKey(id);
+    var cached = await _cache.GetAsync(cacheKey, token: cancellationToken);
+    if (cached != null) return cached;
+
+    var entity = await _repository.GetAsync(id, cancellationToken: cancellationToken);
+    var dto = ObjectMapper.Map<Xxx, XxxDto>(entity);
+    await _cache.SetAsync(cacheKey, dto, token: cancellationToken);
+    return dto;
+}
+```
+
+### Zorunlu Cache Invalidation Senaryoları
+
+| İşlem | Temizlenen Cache |
+|-------|-----------------|
+| Entity oluşturuldu | List cache |
+| Entity güncellendi | Item cache + List cache + Slug cache |
+| Entity silindi | Item cache + List cache + Slug cache |
+| Batch işlem | Tüm related cache |
+
+### Kural
+- `GetAsync` ve `GetListAsync` → cache-first
+- `CreateAsync`, `UpdateAsync`, `DeleteAsync` → önce işlem, sonra invalidation
+
+## 7) Service Interface Pattern
+
+```csharp
+using System;
+using System.Threading.Tasks;
+using Volo.Abp.Application.Services;
+
+namespace Fitliyo.Application.Contracts.XxxEntities
+{
+    public interface IXxxAppService :
+        ICrudAppService<XxxDto, Guid, GetXxxListDto, CreateUpdateXxxDto>
+    {
+        Task<XxxDto> GetBySlugAsync(string slug);
+    }
+}
+```
+
+## 8) EF Core Mapping Pattern
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Volo.Abp.EntityFrameworkCore.Modeling;
+
+namespace Fitliyo.EntityFrameworkCore.Mappings
+{
+    public class XxxMapping : IEntityTypeConfiguration<Xxx>
+    {
+        public void Configure(EntityTypeBuilder<Xxx> builder)
+        {
+            builder.ToTable(FitliyoConsts.DbTablePrefix + "Xxxs", FitliyoConsts.DbSchema);
+            builder.ConfigureByConvention();
+
+            builder.Property(x => x.Title)
+                .IsRequired()
+                .HasMaxLength(XxxConsts.MaxTitleLength);
+
+            builder.Property(x => x.Slug)
+                .HasMaxLength(XxxConsts.MaxSlugLength);
+
+            builder.HasIndex(x => x.Slug).IsUnique();
+
+            builder.HasOne<TrainerProfile>()
+                .WithMany()
+                .HasForeignKey(x => x.TrainerProfileId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasIndex(x => x.TrainerProfileId);
+        }
+    }
+}
+```
+
+**Kurallar:**
+- Tablo adı: `FitliyoConsts.DbTablePrefix` + çoğul entity adı
+- `ConfigureByConvention()` çağrılmalı
+- Property constraint'leri mapping'de de tanımlanmalı
+- FK ilişkileri ve `OnDelete` davranışı açıkça belirtilmeli
+- Sık sorgulanan alanlara index eklenmeli
+- Slug alanları unique index olmalı
+
+## 9) Tek Dosya — Tek Tip Kuralı (ZORUNLU)
+
+Her dosyada yalnızca **bir** class, interface, enum veya record bulunur. Birden fazla tip tanımı aynı dosyada YASAK.
+
+| Dosya | İçerik | Yasak |
+|-------|--------|-------|
+| `Xxx.cs` | `class Xxx` | Aynı dosyada `class Yyy` olmaz |
+| `IXxxAppService.cs` | `interface IXxxAppService` | Aynı dosyada `interface IYyy` olmaz |
+| `XxxDto.cs` | `class XxxDto` | Aynı dosyada `class CreateUpdateXxxDto` olmaz |
+| `XxxConsts.cs` | `static class XxxConsts` | Sadece bu class |
+| `XxxEnum.cs` | `enum XxxEnum` | Sadece bu enum |
+
+**İstisna:** Nested class (parent class içinde private/internal helper class) kabul edilebilir.
+
+## 10) Dosya Yapısı
+
+```
+src/
+├── Fitliyo.Domain/
+│   └── XxxEntities/
+│       ├── Xxx.cs                    # Entity
+│       └── XxxConsts.cs              # Sabitler
+├── Fitliyo.Application.Contracts/
+│   └── XxxEntities/
+│       ├── IXxxAppService.cs         # Servis interface
+│       └── Dtos/
+│           ├── XxxDto.cs             # Read DTO
+│           ├── CreateUpdateXxxDto.cs # Input DTO
+│           └── GetXxxListDto.cs      # Liste filtre DTO
+├── Fitliyo.Application/
+│   └── XxxEntities/
+│       └── XxxAppService.cs          # AppService implementasyonu
+└── Fitliyo.EntityFrameworkCore/
+    └── EntityFrameworkCore/
+        └── Mappings/
+            └── XxxMapping.cs          # EF Core mapping
+```
+
+## 11) Marketplace-Specific Entity Desenleri
+
+### Trainer Profil Sahipliği
+
+```csharp
+public class TrainerProfile : FullAuditedAggregateRoot<Guid>
+{
+    [Required]
+    public Guid UserId { get; set; } // 1-1 AppUser
+    [Required]
+    [StringLength(100)]
+    public string Slug { get; set; }
+    public TrainerType TrainerType { get; set; }
+    public decimal AverageRating { get; set; }
+    public bool IsVerified { get; set; }
+    public SubscriptionTier SubscriptionTier { get; set; }
+}
+```
+
+### Sipariş / Çok Taraflı İlişki
+
+```csharp
+public class Order : FullAuditedAggregateRoot<Guid>
+{
+    [Required]
+    [StringLength(20)]
+    public string OrderNumber { get; set; } // ORD-20250001
+    [Required]
+    public Guid StudentUserId { get; set; }
+    [Required]
+    public Guid TrainerProfileId { get; set; }
+    [Required]
+    public Guid ServicePackageId { get; set; }
+    public OrderStatus Status { get; set; }
+    public decimal TotalAmount { get; set; }
+    public decimal PlatformCommissionAmount { get; set; }
+    public decimal TrainerEarningAmount { get; set; }
+}
+```
+
+### Ödeme / Escrow Deseni
+
+```csharp
+public class TrainerWallet : FullAuditedAggregateRoot<Guid>
+{
+    [Required]
+    public Guid TrainerProfileId { get; set; } // 1-1
+    public decimal AvailableBalance { get; set; }
+    public decimal PendingBalance { get; set; }
+    public decimal TotalEarned { get; set; }
+    public decimal TotalWithdrawn { get; set; }
+}
+```

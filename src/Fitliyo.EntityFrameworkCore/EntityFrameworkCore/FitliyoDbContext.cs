@@ -1,4 +1,12 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Fitliyo.Categories;
+using Fitliyo.Messaging;
+using Fitliyo.Notifications;
+using Fitliyo.Orders;
+using Fitliyo.Packages;
+using Fitliyo.Reviews;
+using Fitliyo.Subscriptions;
+using Fitliyo.Trainers;
+using Microsoft.EntityFrameworkCore;
 using Volo.Abp.AuditLogging.EntityFrameworkCore;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
 using Volo.Abp.Data;
@@ -23,22 +31,30 @@ public class FitliyoDbContext :
     IIdentityDbContext,
     ITenantManagementDbContext
 {
-    /* Add DbSet properties for your Aggregate Roots / Entities here. */
+    #region Marketplace Entities
+
+    public DbSet<TrainerProfile> TrainerProfiles { get; set; }
+    public DbSet<TrainerCertificate> TrainerCertificates { get; set; }
+    public DbSet<TrainerGallery> TrainerGalleries { get; set; }
+    public DbSet<Category> Categories { get; set; }
+    public DbSet<TrainerCategoryMapping> TrainerCategoryMappings { get; set; }
+    public DbSet<ServicePackage> ServicePackages { get; set; }
+    public DbSet<PackageAvailabilitySchedule> PackageAvailabilitySchedules { get; set; }
+    public DbSet<PackageUnavailableDate> PackageUnavailableDates { get; set; }
+    public DbSet<Order> Orders { get; set; }
+    public DbSet<Session> CoachingSessions { get; set; }
+    public DbSet<Review> Reviews { get; set; }
+    public DbSet<Conversation> Conversations { get; set; }
+    public DbSet<Message> Messages { get; set; }
+    public DbSet<Notification> Notifications { get; set; }
+    public DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
+    public DbSet<TrainerSubscription> TrainerSubscriptions { get; set; }
+
+    #endregion
 
     #region Entities from the modules
 
-    /* Notice: We only implemented IIdentityDbContext and ITenantManagementDbContext
-     * and replaced them for this DbContext. This allows you to perform JOIN
-     * queries for the entities of these modules over the repositories easily. You
-     * typically don't need that for other modules. But, if you need, you can
-     * implement the DbContext interface of the needed module and use ReplaceDbContext
-     * attribute just like IIdentityDbContext and ITenantManagementDbContext.
-     *
-     * More info: Replacing a DbContext of a module ensures that the related module
-     * uses this DbContext on runtime. Otherwise, it will use its own DbContext class.
-     */
-
-    //Identity
+    // Identity
     public DbSet<IdentityUser> Users { get; set; }
     public DbSet<IdentityRole> Roles { get; set; }
     public DbSet<IdentityClaimType> ClaimTypes { get; set; }
@@ -56,14 +72,11 @@ public class FitliyoDbContext :
     public FitliyoDbContext(DbContextOptions<FitliyoDbContext> options)
         : base(options)
     {
-
     }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
-
-        /* Include modules to your migration db context */
 
         builder.ConfigurePermissionManagement();
         builder.ConfigureSettingManagement();
@@ -74,13 +87,6 @@ public class FitliyoDbContext :
         builder.ConfigureFeatureManagement();
         builder.ConfigureTenantManagement();
 
-        /* Configure your own tables/entities inside here */
-
-        //builder.Entity<YourEntity>(b =>
-        //{
-        //    b.ToTable(FitliyoConsts.DbTablePrefix + "YourEntities", FitliyoConsts.DbSchema);
-        //    b.ConfigureByConvention(); //auto configure for the base class props
-        //    //...
-        //});
+        builder.ConfigureFitliyo();
     }
 }

@@ -1,0 +1,77 @@
+---
+description: Global çalışma kuralları (Fitliyo Backend)
+globs:
+alwaysApply: true
+---
+
+# Global Çalışma Kuralları
+
+## Skills (Modüler Kural Sistemi)
+
+Detaylı kurallar `.claude/skills/` altında modüler yapıda organize edilmiştir.
+Her skill `SKILL.md` (< 50 satır özet) + `references/rules.md` (detaylı örnekler) içerir.
+
+| Skill | Kapsam |
+|-------|--------|
+| `Fitliyo-rules-manager` | Tüm skill'leri yöneten orchestrator |
+| `dotnet-abp-practices` | .NET 9, ABP Framework, Entity, DTO, AppService, EF Core |
+| `architecture-guidelines` | DDD katmanlama, marketplace modüller, cache, background job |
+| `security-performance` | P9, P11, P12, yetkilendirme, input validation, güvenlik |
+| `testing-standards` | xUnit, Shouldly, test kalıpları, yaygın hatalar |
+| `documentation-practices` | CHANGELOG, AppService docs, frontend takip, Swagger |
+| `workflow-practices` | Git, PR, commit, endpoint kontrol, code review |
+
+## Dil ve Araçlar
+
+- Tüm yanıtlar **Türkçe** olmalıdır.
+- Karmaşık analizlerde **sequential thinking** kullan.
+- Kütüphane/framework dokümanı gerekirse **Context7** kullan.
+
+## Kural Haritası (Tek Kaynak Prensibi)
+
+Her kural **tek bir dosyada** detaylı tutulur. Diğer dosyalar referans verir:
+
+| Kural | Canonical Dosya |
+|-------|----------------|
+| API sözleşmesi (swagger tek kaynak) | [auto-generation.mdc](auto-generation.mdc) |
+| Yetkilendirme (`[Authorize]` method-level) | [auto-generation.mdc](auto-generation.mdc), [code-review.mdc](code-review.mdc) §1 |
+| P9, P11, P12 performans kuralları | [security-performance.mdc](security-performance.mdc) |
+| Naming conventions | [code-quality.mdc](code-quality.mdc) |
+| Entity/DTO/AppService kalıpları | [entity-patterns.mdc](entity-patterns.mdc) |
+| Cache stratejisi | [entity-patterns.mdc](entity-patterns.mdc) §7 |
+| Exception/error handling | [code-review.mdc](code-review.mdc) §4 |
+| Structured logging | [turkish-messages.mdc](turkish-messages.mdc) |
+| CHANGELOG ve dokümantasyon | [documentation-rules.mdc](documentation-rules.mdc) |
+| Frontend değişiklik takibi | [frontend-change-tracking.mdc](frontend-change-tracking.mdc) |
+| Yetkilendirme matrisi | [documentation-rules.mdc](documentation-rules.mdc) §8 |
+| Test standartları | [testing-standards.mdc](testing-standards.mdc) |
+| Git/PR konvansiyonları | [pr-git-conventions.mdc](pr-git-conventions.mdc) |
+| Görev yürütme akışı | [workflow-execution.mdc](workflow-execution.mdc) |
+| Boy Scout Rule | [code-review.mdc](code-review.mdc) §KAPSAM |
+| Proaktif bug fix | [workflow-execution.mdc](workflow-execution.mdc) |
+
+## Kural Senkronizasyonu — Cursor ↔ Claude (ZORUNLU)
+
+- Cursor kurallarına (`.cursor/rules/`) eklenen her kural → **aynı anda** Claude'a da (`.claude/`) yansıtılmalı.
+- Tersi de geçerli. Tek taraflı kural değişikliği **YASAK**.
+
+## Değişiklik Özeti (ZORUNLU)
+
+Her yanıtın sonuna, **dosya değişikliği olan tüm yanıtlarda**, aşağıdaki formatta kısa bir özet ekle:
+
+```
+---
+### Yapılan Değişiklikler
+| Durum | Dosya | Ne Değişti |
+|-------|-------|------------|
+| ✅ Oluşturuldu | `src/.../Xxx.cs` | Yeni entity eklendi |
+| ✏️ Güncellendi | `docs/CHANGELOG.md` | v1.2.3 girişi eklendi |
+| 🗑️ Silindi | `src/.../OldFile.cs` | Kullanılmayan dosya kaldırıldı |
+
+> ⚠️ Gerekli aksiyonlar: ... (varsa)
+```
+
+**Kurallar:**
+- Dosya değişikliği olmayan yanıtlarda özet eklenmez.
+- Her satır tek bir dosyayı temsil eder.
+- "Ne Değişti" kısmı kısa ve UI geliştirici perspektifinden yazılır.

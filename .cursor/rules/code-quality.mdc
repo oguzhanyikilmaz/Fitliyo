@@ -1,0 +1,102 @@
+---
+description: "Kod kalitesi ve hata önleme — her zaman aktif"
+globs:
+alwaysApply: true
+---
+
+# Kod Kalitesi Standartları (.NET / C#)
+
+## ZORUNLU: Düzenleme Sonrası Kontroller
+
+Her dosya düzenlemesinden sonra:
+1. `ReadLints` ile düzenlenen dosyayı kontrol et
+2. Tüm C# derleme hatalarını (ERROR) hemen düzelt
+3. Mevcut testleri kırmadığından emin ol
+4. Bozuk kod bırakma
+5. **Dosyanın TAMAMINI kontrol et** — sadece değiştirdiğin satırları değil, dosyadaki tüm mevcut sorunları da düzelt (Boy Scout Rule)
+6. **TODO/FIXME/HACK yorumlarını tespit et** — bulduklarını kullanıcıya göster, tamamlamak isteyip istemediğini sor, asla sessizce geçme
+
+## Temel Davranış
+
+- **Önce analiz et** — körü körüne kod yazma
+- **Tahmin etme** — belirsizse swagger'a bak veya sor
+- **Mevcut stili koru** — proje konvansiyonlarına uy
+- **Minimal değişiklik** — aşırı mühendislik yapma
+
+## İsimlendirme Konvansiyonları
+
+| Tip | Format | Örnek |
+|-----|--------|-------|
+| Class / Record | PascalCase | `UserAppService` |
+| Interface | I + PascalCase | `IUserRepository` |
+| Method | PascalCase + Async | `GetUserAsync` |
+| Property | PascalCase | `FirstName` |
+| Private field | _camelCase | `_userRepository` |
+| Local variable | camelCase | `userId` |
+| Constant | PascalCase | `MaxRetryCount` |
+| Enum | PascalCase | `LeaveStatus` |
+| Enum member | PascalCase | `Approved` |
+| Namespace | PascalCase (noktalı) | `Fitliyo.Application.Users` |
+| Generic type | T + PascalCase | `TEntity` |
+
+## Yasaklar
+
+- Bir dosyada birden fazla class, interface, enum veya record tanımı (her tip kendi dosyasında olmalı)
+- `catch (Exception)` ile genel exception yakalayıp yutma (spesifik exception kullan)
+- String concatenation ile SQL üretme (`$"SELECT ... WHERE id = {id}"`)
+- Hassas veri loglama (şifre, token, TC kimlik)
+- Magic string / magic number (sabit olarak tanımla)
+- `Task.Result` / `Task.Wait()` (async bloklama — deadlock riski)
+- `public` field (property kullan)
+- `DateTime.UtcNow` (yerine `DateTime.Now` kullan — proje Türkiye lokali ile çalışır)
+- Boş `catch` blokları
+- `#region` kullanımı (metot uzunsa refactor yap)
+- Class-level `[Authorize(FitliyoPermissions....)]` (method-level olmalı)
+- Döngü (`for`/`foreach`) içinde `await` ile dış servis çağrısı (MinIO, HTTP, Redis, SMTP, SignalR, repository tekli çağrı) — servis katmanında toplu batch metodu oluştur/kullan
+- İş mantığında (AppService/Controller) doğrudan `Task.WhenAll` kullanımı — paralelleme yalnızca batch servis metodu **içinde** kontrollü yapılır
+
+## Zorunlu Pattern'ler
+
+```csharp
+// Async metot — CancellationToken
+public async Task<ResultDto> GetDataAsync(Guid id, CancellationToken cancellationToken = default)
+
+// Structured logging
+_logger.LogInformation("Kullanıcı verisi getirildi: {UserId}, {Count} kayıt", userId, count);
+
+// Guard clause
+if (input == null) throw new ArgumentNullException(nameof(input));
+if (string.IsNullOrWhiteSpace(input.Name))
+    throw new BusinessException(FitliyoDomainErrorCodes.NameRequired);
+
+// DTO validation
+[Required]
+[StringLength(128)]
+public string Name { get; set; }
+
+// Error handling
+throw new UserFriendlyException("İşlem sırasında hata oluştu.");
+throw new BusinessException(FitliyoDomainErrorCodes.EntityNotFound);
+
+// Null-conditional ve null-coalescing
+var name = user?.FirstName ?? "Bilinmiyor";
+
+// P9/P11 detaylı örnekler → bkz. security-performance.mdc
+```
+
+## Katman Kuralları
+
+Detaylı katman bağımlılık tablosu → bkz. [code-review.mdc](code-review.mdc) §3
+
+## Görev Tamamlama Kontrol Listesi
+
+- [ ] Build başarılı mı? (`dotnet build`)
+- [ ] Lint / derleme hatası yok mu?
+- [ ] Mevcut testler geçiyor mu?
+- [ ] `[Authorize]` attribute method-level uygulandı mı?
+- [ ] DTO'da validation var mı? (`[Required]`, `[StringLength]`)
+- [ ] Cache stratejisi düşünüldü mü? (okuma → cache-first)
+- [ ] Error handling yapıldı mı? (`BusinessException` / `UserFriendlyException`)
+- [ ] Structured logging eklendi mi?
+- [ ] Döngü içinde dış servis çağrısı yok mu? (N+1 dış servis anti-pattern kontrolü)
+- [ ] CHANGELOG.md güncellenmeli mi?
