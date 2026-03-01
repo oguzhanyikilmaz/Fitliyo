@@ -68,6 +68,11 @@
 - **Yetkilendirme sistemi**: [`docs/AUTHORIZATION-SYSTEM.md`](AUTHORIZATION-SYSTEM.md)
 - **Authentication akışı**: [`docs/security/AUTH_LOGIN_AND_CORS.md`](security/AUTH_LOGIN_AND_CORS.md)
 
+## 📋 Proje Analizi ve Eksiklikler
+
+- **Eksiklik analizi (analiz doc vs mevcut kod):** [`docs/EKSIKLIK_ANALIZI.md`](EKSIKLIK_ANALIZI.md) — FitMarket Pro analiz dokümanına göre eksik modüller, entity’ler ve API’ler.
+- **Kaynak analiz dokümanı:** `docs/FitMarketPro_Proje_Analiz.docx` (Word).
+
 ## 💰 İş Kuralları
 
 - **Veritabanı şeması**: [`docs/DATABASE-SCHEMA.md`](DATABASE-SCHEMA.md)
