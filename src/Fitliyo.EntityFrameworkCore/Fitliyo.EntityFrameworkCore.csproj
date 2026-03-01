@@ -9,6 +9,14 @@
     <CopyLocalLockFileAssemblies>True</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
+<PropertyGroup>
+  <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+</PropertyGroup>
+
+<ItemGroup>
+  <Compile Include="**/*.cs" />
+</ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Fitliyo.Domain\Fitliyo.Domain.csproj" />
     <ProjectReference Include="..\Fitliyo.Domain.Shared\Fitliyo.Domain.Shared.csproj" />
