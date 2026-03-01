@@ -1,8 +1,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /build
 COPY . .
-RUN mkdir -p src/Fitliyo.EntityFrameworkCore/bin/Debug \
-    && mkdir -p src/Fitliyo.EntityFrameworkCore/bin/Release \
+RUN find src -name "*.csproj" | sed 's|/[^/]*\.csproj||' | xargs -I{} mkdir -p {}/bin/Debug {}/bin/Release \
     && dotnet publish src/Fitliyo.DbMigrator/Fitliyo.DbMigrator.csproj \
     -c Release \
     -o /app/publish
