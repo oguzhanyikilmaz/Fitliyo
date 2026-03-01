@@ -37,20 +37,11 @@ check_requirements() {
     echo -e "${GREEN}[OK] Docker ve Docker Compose mevcut${NC}"
 }
 
-setup_env() {
-    if [ ! -f .env ]; then
-        echo -e "${YELLOW}[INFO] .env dosyası bulunamadı, .env.example kopyalanıyor...${NC}"
-        cp .env.example .env
-        echo -e "${YELLOW}[UYARI] .env dosyasını düzenleyip şifreleri değiştirmeniz önerilir!${NC}"
-        echo -e "${YELLOW}        nano .env${NC}"
-        echo ""
-    fi
-}
+
 
 cmd_up() {
     print_banner
     check_requirements
-    setup_env
 
     echo -e "${CYAN}[1/3] Docker imajları build ediliyor...${NC}"
     docker compose -p $PROJECT_NAME -f $COMPOSE_FILE build --parallel
