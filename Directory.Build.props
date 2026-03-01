@@ -1,5 +1,4 @@
 <Project>
   <PropertyGroup>
-    <EnableDefaultEmbeddedResourceItems>true</EnableDefaultEmbeddedResourceItems>
-  </PropertyGroup>
+<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>  </PropertyGroup>
 </Project>
