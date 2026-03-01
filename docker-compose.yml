@@ -52,7 +52,7 @@ services:
       dockerfile: src/Fitliyo.DbMigrator/Dockerfile
     container_name: fitliyo-migrator
     environment:
-      ConnectionStrings__Default: "Host=fitliyo-postgres;Port=5432;Database=${POSTGRES_DB:-Fitliyo};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-Str0ngP@ssw0rd!}"
+      ConnectionStrings__Default: "Host=fitliyo-postgres;Port=5432;Database=${POSTGRES_DB:-Fitliyo};Username=${POSTGRES_USER:-fitliyo};Password=${POSTGRES_PASSWORD:-fitliyo@!23}"
       OpenIddict__Applications__Fitliyo_Web__RootUrl: "http://${APP_HOST:-localhost}:${APP_PORT:-6000}"
       OpenIddict__Applications__Fitliyo_Swagger__RootUrl: "http://${APP_HOST:-localhost}:${APP_PORT:-6000}"
     networks:
@@ -74,7 +74,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: "http://+:80"
       App__SelfUrl: "http://${APP_HOST:-localhost}:${APP_PORT:-6000}"
-      ConnectionStrings__Default: "Host=fitliyo-postgres;Port=5432;Database=${POSTGRES_DB:-Fitliyo};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-Str0ngP@ssw0rd!}"
+      ConnectionStrings__Default: "Host=fitliyo-postgres;Port=5432;Database=${POSTGRES_DB:-Fitliyo};Username=${POSTGRES_USER:-fitliyo};Password=${POSTGRES_PASSWORD:-fitliyo@!23}"
       Redis__Configuration: "fitliyo-redis:6379"
       StringEncryption__DefaultPassPhrase: "${ENCRYPTION_PASSPHRASE:-5PIFngvTo4bwrC0H}"
     networks:
