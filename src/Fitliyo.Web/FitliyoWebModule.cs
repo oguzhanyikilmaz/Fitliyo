@@ -94,7 +94,7 @@ public class FitliyoWebModule : AbpModule
 
             PreConfigure<OpenIddictServerBuilder>(serverBuilder =>
             {
-                serverBuilder.AddProductionEncryptionAndSigningCertificate("openiddict.pfx", "5322442f-184c-4f86-acc4-f7610046737d");
+                serverBuilder.AddProductionEncryptionAndSigningCertificate("openiddict.pfx", "Fitliyo@Pfx2026");
             });
         }
     }
