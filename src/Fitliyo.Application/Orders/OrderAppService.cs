@@ -4,7 +4,7 @@ using System.Linq.Dynamic.Core;
 using System.Threading.Tasks;
 using Fitliyo.Enums;
 using Fitliyo.Orders.Dtos;
-using Fitliyo.Packages;
+using Fitliyo.ServicePackages;
 using Fitliyo.Permissions;
 using Fitliyo.Trainers;
 using Microsoft.AspNetCore.Authorization;

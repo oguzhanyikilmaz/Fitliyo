@@ -5,7 +5,7 @@ using Fitliyo.Admin.Dtos;
 using Fitliyo.Categories;
 using Fitliyo.Enums;
 using Fitliyo.Orders;
-using Fitliyo.Packages;
+using Fitliyo.ServicePackages;
 using Fitliyo.Permissions;
 using Fitliyo.Reviews;
 using Fitliyo.Subscriptions;

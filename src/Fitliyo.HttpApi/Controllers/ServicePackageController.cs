@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
-using Fitliyo.Packages;
-using Fitliyo.Packages.Dtos;
+using Fitliyo.ServicePackages;
+using Fitliyo.ServicePackages.Dtos;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;

@@ -2,7 +2,7 @@ using Fitliyo.Categories;
 using Fitliyo.Messaging;
 using Fitliyo.Notifications;
 using Fitliyo.Orders;
-using Fitliyo.Packages;
+using Fitliyo.ServicePackages;
 using Fitliyo.Reviews;
 using Fitliyo.Subscriptions;
 using Fitliyo.Trainers;
