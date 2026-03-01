@@ -14,8 +14,8 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-Fitliyo}
-      POSTGRES_USER: ${POSTGRES_USER:-fitliyo}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fitliyo@!23}
+      POSTGRES_USER: ${POSTGRES_USER:-Fitliyo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-Fitliyo@!23}
     ports:
       - "${POSTGRES_EXTERNAL_PORT:-5433}:5432"
     volumes:
@@ -23,7 +23,7 @@ services:
     networks:
       - fitliyo-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-Fitliyo}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-Fitliyo} -d ${POSTGRES_DB:-Fitliyo}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -52,7 +52,7 @@ services:
       dockerfile: src/Fitliyo.DbMigrator/Dockerfile
     container_name: fitliyo-migrator
     environment:
-      ConnectionStrings__Default: "Host=fitliyo-postgres;Port=5432;Database=${POSTGRES_DB:-Fitliyo};Username=${POSTGRES_USER:-fitliyo};Password=${POSTGRES_PASSWORD:-fitliyo@!23}"
+      ConnectionStrings__Default: "Host=fitliyo-postgres;Port=5432;Database=${POSTGRES_DB:-Fitliyo};Username=${POSTGRES_USER:-Fitliyo};Password=${POSTGRES_PASSWORD:-Fitliyo@!23}"
       OpenIddict__Applications__Fitliyo_Web__RootUrl: "http://${APP_HOST:-localhost}:${APP_PORT:-6000}"
       OpenIddict__Applications__Fitliyo_Swagger__RootUrl: "http://${APP_HOST:-localhost}:${APP_PORT:-6000}"
     networks:
@@ -74,7 +74,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: "http://+:80"
       App__SelfUrl: "http://${APP_HOST:-localhost}:${APP_PORT:-6000}"
-      ConnectionStrings__Default: "Host=fitliyo-postgres;Port=5432;Database=${POSTGRES_DB:-Fitliyo};Username=${POSTGRES_USER:-fitliyo};Password=${POSTGRES_PASSWORD:-fitliyo@!23}"
+      ConnectionStrings__Default: "Host=fitliyo-postgres;Port=5432;Database=${POSTGRES_DB:-Fitliyo};Username=${POSTGRES_USER:-Fitliyo};Password=${POSTGRES_PASSWORD:-Fitliyo@!23}"
       Redis__Configuration: "fitliyo-redis:6379"
       StringEncryption__DefaultPassPhrase: "${ENCRYPTION_PASSPHRASE:-5PIFngvTo4bwrC0H}"
     networks:
