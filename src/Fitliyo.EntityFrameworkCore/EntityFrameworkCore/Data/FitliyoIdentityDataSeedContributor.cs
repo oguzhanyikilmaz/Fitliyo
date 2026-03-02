@@ -14,7 +14,7 @@ namespace Fitliyo.EntityFrameworkCore.Data;
 /// </summary>
 public class FitliyoIdentityDataSeedContributor : IDataSeedContributor, ITransientDependency
 {
-    public const string AdminUserName = "admin";
+    public const string AdminUserName = "adminFitliyo";
     public const string AdminEmail = "admin@fitliyo.com";
     public const string AdminPassword = "Test123!";
     public const string TrainerUserName = "egitmen";

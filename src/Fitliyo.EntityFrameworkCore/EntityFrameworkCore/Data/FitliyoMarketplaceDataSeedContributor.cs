@@ -17,6 +17,7 @@ using Fitliyo.Support;
 using Fitliyo.Trainers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 using Volo.Abp.Data;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
@@ -112,7 +113,7 @@ public class FitliyoMarketplaceDataSeedContributor : IDataSeedContributor, ITran
     [UnitOfWork]
     public virtual async Task SeedAsync(DataSeedContext context)
     {
-        var admin = await _userRepository.FindByNormalizedUserNameAsync("ADMIN");
+        var admin = await _userRepository.FindByNormalizedUserNameAsync("ADMINFITLIYO");
         var trainerUser = await _userRepository.FindByNormalizedUserNameAsync("EGITMEN");
         var studentUser = await _userRepository.FindByNormalizedUserNameAsync("OGRENCI");
 
@@ -263,33 +264,41 @@ public class FitliyoMarketplaceDataSeedContributor : IDataSeedContributor, ITran
 
     private async Task SeedSubscriptionPlansAsync()
     {
-        if (await _subscriptionPlanRepository.AnyAsync()) return;
-        var free = new SubscriptionPlan(_guidGenerator.Create(), "Ücretsiz", SubscriptionTier.Free, 0, 0.15m)
+        try
         {
-            Description = "Temel liste, 3 paket limiti.",
-            MaxPackageCount = 3,
-            SortOrder = 0
-        };
-        var basic = new SubscriptionPlan(_guidGenerator.Create(), "Basic", SubscriptionTier.Basic, 99m, 0.10m)
+            if (await _subscriptionPlanRepository.AnyAsync()) return;
+
+            var free = new SubscriptionPlan(_guidGenerator.Create(), "Ücretsiz", SubscriptionTier.Free, 0, 0.15m)
+            {
+                Description = "Temel liste, 3 paket limiti.",
+                MaxPackageCount = 3,
+                SortOrder = 0
+            };
+            var basic = new SubscriptionPlan(_guidGenerator.Create(), "Basic", SubscriptionTier.Basic, 99m, 0.10m)
+            {
+                Description = "10 paket, öne çıkan liste hakkı.",
+                MaxPackageCount = 10,
+                HasFeaturedListing = true,
+                SortOrder = 1
+            };
+            var pro = new SubscriptionPlan(_guidGenerator.Create(), "Pro", SubscriptionTier.Pro, 249m, 0.08m)
+            {
+                Description = "Sınırsız paket, öncelikli destek, analitik.",
+                MaxPackageCount = -1,
+                HasFeaturedListing = true,
+                HasPrioritySupport = true,
+                HasAdvancedAnalytics = true,
+                SortOrder = 2
+            };
+            await _subscriptionPlanRepository.InsertAsync(free);
+            await _subscriptionPlanRepository.InsertAsync(basic);
+            await _subscriptionPlanRepository.InsertAsync(pro);
+            _logger.LogInformation("Abonelik planları seed edildi.");
+        }
+        catch (PostgresException ex) when (ex.SqlState == "42P01")
         {
-            Description = "10 paket, öne çıkan liste hakkı.",
-            MaxPackageCount = 10,
-            HasFeaturedListing = true,
-            SortOrder = 1
-        };
-        var pro = new SubscriptionPlan(_guidGenerator.Create(), "Pro", SubscriptionTier.Pro, 249m, 0.08m)
-        {
-            Description = "Sınırsız paket, öncelikli destek, analitik.",
-            MaxPackageCount = -1,
-            HasFeaturedListing = true,
-            HasPrioritySupport = true,
-            HasAdvancedAnalytics = true,
-            SortOrder = 2
-        };
-        await _subscriptionPlanRepository.InsertAsync(free);
-        await _subscriptionPlanRepository.InsertAsync(basic);
-        await _subscriptionPlanRepository.InsertAsync(pro);
-        _logger.LogInformation("Abonelik planları seed edildi.");
+            _logger.LogWarning("AppSubscriptionPlans tablosu bulunamadı, abonelik planları seed atlanıyor. Eksik migration ekleyip DbMigrator tekrar çalıştırın.");
+        }
     }
 
     private async Task<TrainerWallet> SeedTrainerWalletAsync(Guid trainerProfileId)
