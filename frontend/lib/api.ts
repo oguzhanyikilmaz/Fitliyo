@@ -31,7 +31,7 @@ function handleUnauthorized() {
 
 /**
  * Backend API çağrısı. Path'ler Swagger ile uyumlu kebab-case (api-paths.ts).
- * Örnek: ApiPaths.Order.getMyOrdersAsync() → /api/app/order/get-my-orders-async
+ * Örnek: ApiPaths.Order.getMyOrdersAsync() → /api/app/Order/GetMyOrdersAsync
  * 401/403 → giriş sayfasına yönlendirir.
  */
 export async function apiFetch<T>(

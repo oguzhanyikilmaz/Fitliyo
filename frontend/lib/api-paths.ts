@@ -1,30 +1,23 @@
 /**
- * Backend API path'leri — tek kaynak (Swagger ile uyumlu).
- * ABP conventional controller route'ları kebab-case üretir: /api/app/user-profile/get-my-profile
+ * Backend API path'leri — tek kaynak.
+ * ABP conventional controller bu projede PascalCase route kullanıyor: /api/app/UserProfile/GetMyProfileAsync
  * Tüm apiFetch çağrıları bu sabitleri kullanmalı.
  */
 
 const BASE = "/api/app";
 
-function toKebab(s: string): string {
-  return s
-    .replace(/([a-z])([A-Z])/g, "$1-$2")
-    .replace(/([A-Z])([A-Z][a-z])/g, "$1-$2")
-    .toLowerCase();
-}
-
-/** Controller ve action ile path: /api/app/{controller-kebab}/{action-kebab} */
+/** Controller ve action ile path: /api/app/{Controller}/{Action} (PascalCase — backend ile aynı) */
 export function apiPath(controller: string, action: string, query?: string): string {
-  const path = `${BASE}/${toKebab(controller)}/${toKebab(action)}`;
+  const path = `${BASE}/${controller}/${action}`;
   return query ? `${path}${query.startsWith("?") ? query : `?${query}`}` : path;
 }
 
 /** Sık kullanılan endpoint'ler — isimlendirme Swagger'daki path ile aynı */
 export const ApiPaths = {
-  // UserProfile
+  // UserProfile — metod adları C# ile aynı (GetMyProfileAsync, UpdateMyProfileAsync)
   UserProfile: {
-    getMyProfile: () => apiPath("UserProfile", "GetMyProfile"),
-    updateMyProfile: () => apiPath("UserProfile", "UpdateMyProfile"),
+    getMyProfile: () => apiPath("UserProfile", "GetMyProfileAsync"),
+    updateMyProfile: () => apiPath("UserProfile", "UpdateMyProfileAsync"),
   },
   // Order
   Order: {

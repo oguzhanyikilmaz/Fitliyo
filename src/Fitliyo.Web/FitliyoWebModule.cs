@@ -87,18 +87,26 @@ public class FitliyoWebModule : AbpModule
             });
         });
 
-        // HTTP ile /connect/token kullanımı: Development VEYA SelfUrl http:// ile başlıyorsa HTTPS zorunluluğu kapatılır.
-        var selfUrl = configuration["App:SelfUrl"] ?? "";
-        var allowHttpToken = hostingEnvironment.IsDevelopment()
-            || selfUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase);
-
-        if (allowHttpToken)
+        // HTTP ile /connect/token: Development'ta HTTPS zorunluluğu her zaman kapatılır (403 önlemek için).
+        if (hostingEnvironment.IsDevelopment())
         {
             PreConfigure<OpenIddictServerBuilder>(serverBuilder =>
             {
                 serverBuilder.UseAspNetCore()
                     .DisableTransportSecurityRequirement();
             });
+        }
+        else
+        {
+            var selfUrl = configuration["App:SelfUrl"] ?? "";
+            if (selfUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            {
+                PreConfigure<OpenIddictServerBuilder>(serverBuilder =>
+                {
+                    serverBuilder.UseAspNetCore()
+                        .DisableTransportSecurityRequirement();
+                });
+            }
         }
 
         if (!hostingEnvironment.IsDevelopment())
@@ -261,7 +269,11 @@ public class FitliyoWebModule : AbpModule
         app.MapAbpStaticAssets();
         app.UseRouting();
         app.UseAuthentication();
-        app.UseAbpOpenIddictValidation();
+
+        // /connect/* (login token vb.) — OpenIddict Validation atlanır; token isteği bearer taşımaz, Validation 403 verebilir
+        app.UseWhen(
+            ctx => !ctx.Request.Path.StartsWithSegments("/connect", StringComparison.OrdinalIgnoreCase),
+            branch => branch.UseAbpOpenIddictValidation());
 
         if (MultiTenancyConsts.IsEnabled)
         {
@@ -271,14 +283,17 @@ public class FitliyoWebModule : AbpModule
         app.UseUnitOfWork();
         app.UseDynamicClaims();
 
-        // Swagger ve swagger.json — Authorization'dan ÖNCE; aksi halde /swagger/v1/swagger.json 403 Forbidden döner
+        // Swagger ve swagger.json — Authorization'dan ÖNCE; aksi halde /swagger/v1/swagger.json 403 döner
         app.UseSwagger();
         app.UseAbpSwaggerUI(options =>
         {
             options.SwaggerEndpoint("/swagger/v1/swagger.json", "Fitliyo API");
         });
 
-        app.UseAuthorization();
+        // /connect/* Authorization'dan muaf
+        app.UseWhen(
+            ctx => !ctx.Request.Path.StartsWithSegments("/connect", StringComparison.OrdinalIgnoreCase),
+            branch => branch.UseAuthorization());
 
         app.UseAuditing();
         app.UseAbpSerilogEnrichers();
