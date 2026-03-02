@@ -1,5 +1,12 @@
 # Fitliyo Changelog
 
+## 2026-03-02 - Marketplace test verileri (Data Seeder)
+
+- **FitliyoMarketplaceDataSeedContributor:** Tüm marketplace entity'leri için anlamlı test verileri eklendi. DbMigrator çalıştığında (önce Identity seed: admin, egitmen, ogrenci), ardından eğitmen profili yoksa: kategoriler (Fitness, Spor Koçluğu, Beslenme, Pilates, Yoga), eğitmen profili (Ahmet Yılmaz, sertifikalar, galeri), abonelik planları (Ücretsiz, Basic, Pro), hizmet paketi, sipariş/seans/ödeme, değerlendirme, mesajlaşma, bildirimler, destek talebi, öne çıkanlar, blog yazıları, kullanıcı profilleri (sağlık), para çekme talebi, uyuşmazlık kaydı seed edilir. Tüm alanlar ilgili property'lere uygun anlamlı değerlerle doldurulur.
+- **docs/SEED_KULLANICILAR.md:** Marketplace test verileri bölümü eklendi.
+
+---
+
 ## 2026-03-02 - Öğrenci ve eğitmen için sağlık/profil sayfası (BMR, BMI, TDEE)
 
 ### Backend

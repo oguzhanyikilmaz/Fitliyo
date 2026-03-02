@@ -18,6 +18,10 @@ DbMigrator çalıştırıldıktan sonra aşağıdaki kullanıcılar otomatik olu
 2. Seed tamamlandığında log’da “Admin kullanıcı oluşturuldu”, “Eğitmen kullanıcı oluşturuldu”, “Öğrenci kullanıcı oluşturuldu” mesajlarını görebilirsiniz.
 3. Frontend’de **Giriş Yap** sayfasından yukarıdaki bilgilerle giriş yapın.
 
+## Marketplace test verileri
+
+DbMigrator ayrıca (eğitmen profili yoksa) kategoriler, eğitmen profili, paketler, sipariş, seans, ödeme, değerlendirme, mesajlaşma, bildirimler, destek talebi, öne çıkanlar, blog, kullanıcı profilleri (sağlık), para çekme ve uyuşmazlık için anlamlı test verileri ekler (FitliyoMarketplaceDataSeedContributor). Giriş sonrası panellerde bu veriler görünür.
+
 ## Teknik not
 
 - Roller: **Admin**, **Trainer**, **Student** (FitliyoIdentityDataSeedContributor).
