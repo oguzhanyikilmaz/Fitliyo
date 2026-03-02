@@ -202,6 +202,9 @@ public static class FitliyoDbContextModelCreatingExtensions
             b.Property(x => x.Currency).IsRequired().HasMaxLength(OrderConsts.MaxCurrencyLength);
             b.Property(x => x.CancellationReason).HasMaxLength(OrderConsts.MaxCancellationReasonLength);
             b.Property(x => x.Notes).HasMaxLength(OrderConsts.MaxNotesLength);
+            b.Property(x => x.StudentFormData).HasMaxLength(OrderConsts.MaxStudentFormDataLength);
+            b.Property(x => x.TrainerProgramNotes).HasMaxLength(OrderConsts.MaxTrainerProgramNotesLength);
+            b.Property(x => x.ProgramAttachmentUrl).HasMaxLength(OrderConsts.MaxProgramAttachmentUrlLength);
             b.Property(x => x.PaymentTransactionId).HasMaxLength(OrderConsts.MaxPaymentTransactionIdLength);
             b.Property(x => x.PaymentProvider).HasMaxLength(OrderConsts.MaxPaymentProviderLength);
             b.Property(x => x.UnitPrice).HasPrecision(10, 2);
@@ -296,7 +299,8 @@ public static class FitliyoDbContextModelCreatingExtensions
 
             b.HasIndex(x => x.InitiatorId);
             b.HasIndex(x => x.ParticipantId);
-            b.HasIndex(x => new { x.InitiatorId, x.ParticipantId }).IsUnique();
+            b.HasIndex(x => x.OrderId);
+            b.HasIndex(x => new { x.InitiatorId, x.ParticipantId, x.OrderId }).IsUnique();
         });
 
         /* Message */

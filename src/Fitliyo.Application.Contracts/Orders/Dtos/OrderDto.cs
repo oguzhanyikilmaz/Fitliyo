@@ -29,4 +29,33 @@ public class OrderDto : EntityDto<Guid>
 
     public string? TrainerFullName { get; set; }
     public string? PackageTitle { get; set; }
+
+    /// <summary>
+    /// Paketteki seans sayısı (null veya 0 ise seans yok — öğrenci programı kendi uygular)
+    /// </summary>
+    public int? PackageSessionCount { get; set; }
+
+    /// <summary>
+    /// Paket süresi (gün) — program paketlerinde kullanılır (örn. 90 = 3 ay)
+    /// </summary>
+    public int? PackageDurationDays { get; set; }
+
+    /// <summary>
+    /// Öğrencinin eğitmene ilettiği form verisi (JSON: kan değerleri, hedefler vb.)
+    /// </summary>
+    public string? StudentFormData { get; set; }
+
+    public DateTime? StudentFormSubmittedAt { get; set; }
+
+    /// <summary>
+    /// Eğitmenin program notları (öğrenciye gösterilir)
+    /// </summary>
+    public string? TrainerProgramNotes { get; set; }
+
+    public DateTime? ProgramDeliveredAt { get; set; }
+
+    /// <summary>
+    /// Program dosyası/link (PDF vb.)
+    /// </summary>
+    public string? ProgramAttachmentUrl { get; set; }
 }

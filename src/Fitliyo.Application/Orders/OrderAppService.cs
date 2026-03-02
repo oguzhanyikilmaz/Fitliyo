@@ -51,7 +51,11 @@ public class OrderAppService : FitliyoAppService, IOrderAppService
             }
         }
 
-        return ObjectMapper.Map<Order, OrderDto>(order);
+        var dto = ObjectMapper.Map<Order, OrderDto>(order);
+        var package = await _packageRepository.GetAsync(order.ServicePackageId);
+        dto.PackageSessionCount = package.SessionCount;
+        dto.PackageDurationDays = package.DurationDays;
+        return dto;
     }
 
     [Authorize]
@@ -197,6 +201,47 @@ public class OrderAppService : FitliyoAppService, IOrderAppService
         var sorted = sessions.OrderBy(x => x.SequenceNumber).ToList();
 
         return new PagedResultDto<SessionDto>(sorted.Count, sorted.Select(x => ObjectMapper.Map<Session, SessionDto>(x)).ToList());
+    }
+
+    [Authorize]
+    public async Task<OrderDto> UpdateStudentFormAsync(Guid orderId, UpdateOrderStudentFormDto input)
+    {
+        var order = await _orderRepository.GetAsync(orderId);
+        var userId = (CurrentUser.Id ?? Guid.Empty);
+        if (order.StudentId != userId)
+            throw new BusinessException(FitliyoDomainErrorCodes.OrderNotFound);
+
+        if (order.Status == OrderStatus.Cancelled)
+            throw new BusinessException(FitliyoDomainErrorCodes.OrderCannotBeCancelled);
+
+        order.StudentFormData = input.FormData;
+        order.StudentFormSubmittedAt = DateTime.Now;
+        await _orderRepository.UpdateAsync(order);
+
+        Logger.LogInformation("Sipariş öğrenci formu güncellendi: {OrderId}", orderId);
+        return await GetAsync(orderId);
+    }
+
+    [Authorize]
+    public async Task<OrderDto> UpdateOrderDeliveryAsync(Guid orderId, UpdateOrderDeliveryDto input)
+    {
+        var order = await _orderRepository.GetAsync(orderId);
+        var userId = (CurrentUser.Id ?? Guid.Empty);
+        var trainerProfile = await _trainerProfileRepository.FindAsync(x => x.UserId == userId);
+        if (trainerProfile == null || trainerProfile.Id != order.TrainerProfileId)
+            await AuthorizationService.CheckAsync(FitliyoPermissions.Admin.Dashboard);
+
+        if (!string.IsNullOrWhiteSpace(input.TrainerProgramNotes))
+            order.TrainerProgramNotes = input.TrainerProgramNotes;
+        if (input.ProgramAttachmentUrl != null)
+            order.ProgramAttachmentUrl = input.ProgramAttachmentUrl;
+        if (input.MarkAsDelivered)
+            order.ProgramDeliveredAt = DateTime.Now;
+
+        await _orderRepository.UpdateAsync(order);
+
+        Logger.LogInformation("Sipariş program teslimi güncellendi: {OrderId}", orderId);
+        return await GetAsync(orderId);
     }
 
     private static string GenerateOrderNumber()

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { apiFetch, buildQuery } from "@/lib/api";
+import { apiFetch, buildQuery, DEFAULT_LIST_PARAMS } from "@/lib/api";
+import { ApiPaths } from "@/lib/api-paths";
 import type { PagedResultDto, TrainerProfileDto, GetTrainerListDto } from "@/lib/types";
 import { TrainerCard } from "./TrainerCard";
 
@@ -18,13 +19,9 @@ export function TrainerList({ title = "Eğitmenleri Keşfet", subtitle, backHref
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const params: GetTrainerListDto = {
-      skipCount: 0,
-      maxResultCount: 24,
-      sorting: "creationTime desc",
-    };
+    const params: GetTrainerListDto = { ...DEFAULT_LIST_PARAMS, maxResultCount: 24 };
     const query = buildQuery(params as Record<string, string | number | boolean | undefined | null>);
-    apiFetch<PagedResultDto<TrainerProfileDto>>(`/api/app/trainerProfile${query}`)
+    apiFetch<PagedResultDto<TrainerProfileDto>>(ApiPaths.TrainerProfile.getListAsync(query))
       .then(setData)
       .catch((e) => setError(e instanceof Error ? e.message : "Liste yüklenemedi"))
       .finally(() => setLoading(false));

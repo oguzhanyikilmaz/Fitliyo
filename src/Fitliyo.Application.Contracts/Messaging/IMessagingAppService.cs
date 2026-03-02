@@ -15,4 +15,9 @@ public interface IMessagingAppService : IApplicationService
     Task<MessageDto> SendMessageAsync(SendMessageDto input);
 
     Task MarkAsReadAsync(Guid conversationId);
+
+    /// <summary>
+    /// Bu siparişe özel öğrenci-eğitmen konuşmasını getirir veya oluşturur. Sipariş detay sayfasından "Bu sipariş hakkında yazış" için kullanılır.
+    /// </summary>
+    Task<ConversationDto> GetOrCreateConversationForOrderAsync(Guid orderId);
 }

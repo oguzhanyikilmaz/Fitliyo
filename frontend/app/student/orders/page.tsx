@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { apiFetch, buildQuery } from "@/lib/api";
+import { apiFetch, buildQuery, DEFAULT_LIST_PARAMS } from "@/lib/api";
+import { ApiPaths } from "@/lib/api-paths";
 import type { PagedResultDto, OrderDto, GetOrderListDto } from "@/lib/types";
 
 const ORDER_STATUS_LABELS: Record<number, string> = {
@@ -27,13 +28,9 @@ export default function OgrenciSiparislerPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const params: GetOrderListDto = {
-      skipCount: 0,
-      maxResultCount: 50,
-      sorting: "creationTime desc",
-    };
+    const params: GetOrderListDto = { ...DEFAULT_LIST_PARAMS };
     const query = buildQuery(params as Record<string, string | number | boolean | undefined | null>);
-    apiFetch<PagedResultDto<OrderDto>>(`/api/app/order/getMyOrders${query}`)
+    apiFetch<PagedResultDto<OrderDto>>(ApiPaths.Order.getMyOrdersAsync(query))
       .then(setData)
       .catch((e) => setError(e instanceof Error ? e.message : "Siparişler yüklenemedi"))
       .finally(() => setLoading(false));

@@ -29,7 +29,10 @@ public class CreateUpdateServicePackageDto
     [Range(1, 365)]
     public int? DurationDays { get; set; }
 
-    [Range(1, 100)]
+    /// <summary>
+    /// Seans sayısı. 0 veya null = seans yok (program paketi — öğrenci programı kendi uygular).
+    /// </summary>
+    [Range(0, 100)]
     public int? SessionCount { get; set; }
 
     [Range(15, 480)]

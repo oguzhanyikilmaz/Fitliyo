@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { ApiPaths } from "@/lib/api-paths";
 import type { UserProfileDto, CreateUpdateUserProfileDto } from "@/lib/types";
 import { Gender, ActivityLevel, FitnessGoal } from "@/lib/types";
 
@@ -47,7 +48,7 @@ export function UserHealthProfile() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    apiFetch<UserProfileDto>("/api/app/userProfile/getMyProfile")
+    apiFetch<UserProfileDto>(ApiPaths.UserProfile.getMyProfile())
       .then((p) => setProfile({ ...p, userId: p.userId || "" }))
       .catch((e) => setError(e instanceof Error ? e.message : "Profil yüklenemedi"))
       .finally(() => setLoading(false));
@@ -83,7 +84,7 @@ export function UserHealthProfile() {
       alcoholConsumption: profile.alcoholConsumption || null,
       restingHeartRate: profile.restingHeartRate ?? null,
     };
-    apiFetch<UserProfileDto>("/api/app/userProfile/updateMyProfile", {
+    apiFetch<UserProfileDto>(ApiPaths.UserProfile.updateMyProfile(), {
       method: "PUT",
       body: JSON.stringify(input),
     })

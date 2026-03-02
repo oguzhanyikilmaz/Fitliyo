@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiFetch, buildQuery } from "@/lib/api";
+import { ApiPaths } from "@/lib/api-paths";
 import type { PagedResultDto, OrderDto, GetOrderListDto, SessionDto } from "@/lib/types";
 
 const ORDER_STATUS_LABELS: Record<number, string> = {
@@ -34,12 +35,12 @@ export default function OgrenciDashboardPage() {
       sorting: "creationTime desc",
     };
     const query = buildQuery(params as Record<string, string | number | boolean | undefined | null>);
-    apiFetch<PagedResultDto<OrderDto>>(`/api/app/order/getMyOrders${query}`)
+    apiFetch<PagedResultDto<OrderDto>>(ApiPaths.Order.getMyOrdersAsync(query))
       .then((res) => {
         setOrders(res.items ?? []);
         const firstOrder = res.items?.[0];
         if (firstOrder?.id) {
-          return apiFetch<PagedResultDto<SessionDto>>(`/api/app/order/getSessions?orderId=${firstOrder.id}`);
+          return apiFetch<PagedResultDto<SessionDto>>(ApiPaths.Order.getSessionsAsync(firstOrder.id));
         }
         return { items: [] as SessionDto[] };
       })

@@ -1,6 +1,6 @@
 /**
  * Backend API base URL.
- * Geliştirme: http://localhost:6000 (veya backend portu)
+ * Geliştirme: http://localhost:5000
  * Production: ortam değişkeni NEXT_PUBLIC_API_URL
  */
 const getBaseUrl = () => {
@@ -12,11 +12,28 @@ const getBaseUrl = () => {
 
 export const API_BASE = getBaseUrl();
 
+const TOKEN_KEY = "fitliyo_token";
+const USER_KEY = "fitliyo_user";
+
 function getToken(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem("fitliyo_token");
+  return localStorage.getItem(TOKEN_KEY);
 }
 
+/** 401/403 durumunda token ve kullanıcıyı temizleyip giriş sayfasına yönlendirir */
+function handleUnauthorized() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+  const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+  window.location.href = `/login?redirect=${redirect}`;
+}
+
+/**
+ * Backend API çağrısı. Path'ler Swagger ile uyumlu kebab-case (api-paths.ts).
+ * Örnek: ApiPaths.Order.getMyOrdersAsync() → /api/app/order/get-my-orders-async
+ * 401/403 → giriş sayfasına yönlendirir.
+ */
 export async function apiFetch<T>(
   path: string,
   options: RequestInit = {}
@@ -30,6 +47,13 @@ export async function apiFetch<T>(
     (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
   }
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+
+  if (res.status === 401 || res.status === 403) {
+    handleUnauthorized();
+    const err = await res.json().catch(() => ({ error: { message: res.statusText } }));
+    throw new Error((err as { error?: { message?: string } })?.error?.message || "Oturum süreniz doldu. Lütfen tekrar giriş yapın.");
+  }
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: { message: res.statusText } }));
     throw new Error((err as { error?: { message?: string } })?.error?.message || res.statusText);
@@ -48,3 +72,10 @@ export function buildQuery(params: Record<string, string | number | boolean | un
   const q = search.toString();
   return q ? `?${q}` : "";
 }
+
+/** P12: Liste isteklerinde zorunlu sayfalama. Parametresiz getList çağrısı yapılmamalı. */
+export const DEFAULT_LIST_PARAMS = {
+  skipCount: 0,
+  maxResultCount: 50,
+  sorting: "creationTime desc",
+} as const;

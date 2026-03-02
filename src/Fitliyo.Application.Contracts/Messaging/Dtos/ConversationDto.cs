@@ -14,4 +14,9 @@ public class ConversationDto : EntityDto<Guid>
     public string? OtherPartyFullName { get; set; }
     public string? OtherPartyProfilePhotoUrl { get; set; }
     public string? LastMessagePreview { get; set; }
+
+    /// <summary>
+    /// Bu konuşma belirli bir siparişe aitse sipariş ID
+    /// </summary>
+    public Guid? OrderId { get; set; }
 }

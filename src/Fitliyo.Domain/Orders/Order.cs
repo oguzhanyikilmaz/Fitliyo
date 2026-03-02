@@ -103,6 +103,34 @@ public class Order : FullAuditedAggregateRoot<Guid>
     [StringLength(OrderConsts.MaxNotesLength)]
     public string? Notes { get; set; }
 
+    /// <summary>
+    /// Öğrencinin sipariş için eğitmene ilettiği bilgiler (JSON: kan değerleri, hedefler, kısıtlar vb.)
+    /// </summary>
+    [StringLength(OrderConsts.MaxStudentFormDataLength)]
+    public string? StudentFormData { get; set; }
+
+    /// <summary>
+    /// Öğrenci formu ne zaman gönderildi
+    /// </summary>
+    public DateTime? StudentFormSubmittedAt { get; set; }
+
+    /// <summary>
+    /// Eğitmenin programa dair notları (öğrenciye gösterilir)
+    /// </summary>
+    [StringLength(OrderConsts.MaxTrainerProgramNotesLength)]
+    public string? TrainerProgramNotes { get; set; }
+
+    /// <summary>
+    /// Program teslim tarihi
+    /// </summary>
+    public DateTime? ProgramDeliveredAt { get; set; }
+
+    /// <summary>
+    /// Program dosyası/link (PDF vb.)
+    /// </summary>
+    [StringLength(OrderConsts.MaxProgramAttachmentUrlLength)]
+    public string? ProgramAttachmentUrl { get; set; }
+
     protected Order()
     {
     }

@@ -82,6 +82,7 @@
 
 ## 📋 Proje Analizi ve Eksiklikler
 
+- **Sistem eksiklik ve geliştirme analizi (güncel özet):** [`docs/SISTEM_EKSIKLIK_VE_GELISTIRME_ANALIZI.md`](SISTEM_EKSIKLIK_VE_GELISTIRME_ANALIZI.md) — Backend, frontend, test ve operasyonel eksiklikler; öncelikli yapılacaklar listesi.
 - **Eksiklik analizi (analiz doc vs mevcut kod):** [`docs/EKSIKLIK_ANALIZI.md`](EKSIKLIK_ANALIZI.md) — FitMarket Pro analiz dokümanına göre eksik modüller, entity’ler ve API’ler.
 - **Kaynak analiz dokümanı:** `docs/FitMarketPro_Proje_Analiz.docx` (Word).
 

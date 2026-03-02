@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { apiFetch, buildQuery } from "@/lib/api";
+import { apiFetch, buildQuery, DEFAULT_LIST_PARAMS } from "@/lib/api";
+import { ApiPaths } from "@/lib/api-paths";
 import type { PagedResultDto, OrderDto, GetOrderListDto, SessionDto } from "@/lib/types";
 
 function formatDate(s: string) {
@@ -26,18 +27,17 @@ export default function StudentSessionsPage() {
 
   useEffect(() => {
     const params: GetOrderListDto = {
-      skipCount: 0,
+      ...DEFAULT_LIST_PARAMS,
       maxResultCount: 20,
-      sorting: "creationTime desc",
     };
     const query = buildQuery(params as Record<string, string | number | boolean | undefined | null>);
-    apiFetch<PagedResultDto<OrderDto>>(`/api/app/order/getMyOrders${query}`)
+    apiFetch<PagedResultDto<OrderDto>>(ApiPaths.Order.getMyOrdersAsync(query))
       .then((res) => {
         const orders = res.items ?? [];
         if (orders.length === 0) return [];
         return Promise.all(
           orders.slice(0, 10).map((o) =>
-            apiFetch<{ items: SessionDto[] }>(`/api/app/order/getSessions?orderId=${o.id}`).then((r) =>
+            apiFetch<PagedResultDto<SessionDto>>(ApiPaths.Order.getSessionsAsync(o.id)).then((r) =>
               (r.items ?? []).map((s) => ({ ...s, orderId: o.id, orderNumber: o.orderNumber }))
             )
           )
@@ -79,7 +79,14 @@ export default function StudentSessionsPage() {
 
       {sessions.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-slate-600">
-          Henüz seansınız yok. Bir paket satın alarak seans planlayabilirsiniz.
+          <p>Henüz seansınız yok. Bir paket satın alarak seans planlayabilirsiniz.</p>
+          <p className="mt-2 text-sm">
+            Seans içermeyen program paketleri (örn. 3 aylık antrenman+beslenme) satın aldıysanız, detaylar için{" "}
+            <Link href="/student/orders" className="font-medium text-fitliyo-green hover:underline">
+              Siparişlerim
+            </Link>
+            sayfasındaki ilgili siparişe tıklayın.
+          </p>
         </div>
       ) : (
         <>

@@ -1,5 +1,68 @@
 # Fitliyo Changelog
 
+## 2026-03-04 - API endpoint path tek kaynak (Swagger uyumlu kebab-case)
+
+- **Sorun:** Swagger’da endpoint’ler kebab-case görünüyordu (/api/app/user-profile/my-profile); frontend istekleri PascalCase kullanıyordu (/api/app/UserProfile/GetMyProfile). Path’ler dağınıktı ve tutarsızlık riski vardı.
+- **Çözüm:** Tüm API path’leri tek kaynakta toplandı. `frontend/lib/api-paths.ts` eklendi: `toKebab()` ile controller/action adları kebab-case’e çevriliyor; `ApiPaths` sabiti ile tüm endpoint’ler merkezi tanımlandı (UserProfile, Order, TrainerProfile, ServicePackage, Notification, SupportTicket, Messaging, Wallet, WithdrawalRequest, Admin, Dispute, FeaturedListing).
+- **Frontend:** Tüm `apiFetch(...)` çağrıları artık `ApiPaths.*` kullanıyor; doğrudan string path yazılmıyor. Böylece Swagger’daki path formatı (kebab-case) ile frontend istekleri uyumlu hale getirildi.
+- **Dokümantasyon:** `lib/api.ts` ve `lib/types.ts` yorumları güncellendi; path’lerin `api-paths.ts` üzerinden kullanılması belirtildi.
+
+---
+
+## 2026-03-04 - Siparişe özel öğrenci bilgisi ve eğitmen–öğrenci iletişimi
+
+- **Senaryo:** Öğrenci paket satın aldıktan sonra eğitmene kan değerleri, hedefler, kısıtlar vb. iletebiliyor; eğitmen programa dair not ve dosya/link teslim ediyor; taraflar o siparişe özel konuşma açabiliyor.
+- **Backend — Order:** `StudentFormData` (JSON/metin), `StudentFormSubmittedAt`, `TrainerProgramNotes`, `ProgramDeliveredAt`, `ProgramAttachmentUrl` alanları eklendi. `OrderAppService.UpdateStudentFormAsync` (öğrenci), `OrderAppService.UpdateOrderDeliveryAsync` (eğitmen). `OrderDto` ve `GetAsync` bu alanları döndürüyor.
+- **Backend — Conversation:** `OrderId` (nullable) eklendi; siparişe özel konuşma aynı siparişte tek. `MessagingAppService.GetOrCreateConversationForOrderAsync(orderId)` ile siparişe özel konuşma getir/oluştur. Genel mesajlaşmada `GetOrCreateConversationAsync` artık `OrderId == null` ile eşleşiyor.
+- **Migration:** `20260304000000_AddOrderStudentFormAndConversationOrderId` — AppOrders’a yeni kolonlar, AppConversations’a OrderId, unique index (InitiatorId, ParticipantId, OrderId).
+- **Frontend — Öğrenci sipariş detay:** “Eğitmene ileteceğin bilgiler” formu (textarea + Gönder/Güncelle), “Eğitmenin program teslimi” kutusu (not + link), “Bu sipariş hakkında eğitmenle yazış” → siparişe özel konuşma açılır. Mesajlar sayfasında `?conversationId=` ile konuşma seçimi.
+- **Frontend — Eğitmen:** Sipariş listesi artık `/trainer/orders/[id]` detayına gidiyor. Yeni sayfa `trainer/orders/[id]`: öğrencinin ilettiği bilgiler (read-only), program teslimi formu (not + URL, “Kaydet”, “Kaydet ve teslim edildi işaretle”), “Bu sipariş hakkında öğrenciyle yazış”. Eğitmen mesajlar sayfası `/trainer/messages` eklendi; menüye “Mesajlar” linki eklendi.
+- **lib/types.ts:** `OrderDto` (studentFormData, trainerProgramNotes, programDeliveredAt, programAttachmentUrl), `UpdateOrderStudentFormDto`, `UpdateOrderDeliveryDto`, `ConversationDto.orderId`.
+
+---
+
+## 2026-02-28 - Program paketi (seanssız) senaryosu desteği
+
+- **Senaryo:** Eğitmen, öğrencinin kendi uygulayacağı paket satabilir (örn. 3 aylık antrenman+beslenme programı). Bu paketlerde bire bir seans yok; öğrenci programı günlük hayatında uygular.
+- **Backend:** `CreateUpdateServicePackageDto.SessionCount` artık 0 kabul ediyor (`[Range(0, 100)]`). `OrderDto`'ya `PackageSessionCount` ve `PackageDurationDays` eklendi; `OrderAppService.GetAsync` sipariş detayında paket bilgisini dolduruyor. Sipariş oluşturulurken zaten seans kaydı üretilmiyor; seans sayısı 0/null paketler için doğal olarak “seans yok” davranışı korunuyor.
+- **Frontend (öğrenci):** Sipariş detay sayfasında seans yok ve `packageSessionCount` 0/null ise “Program paketi — seans yok” kutusu gösteriliyor; program süresi (gün/ay) varsa yazılıyor. Seanslarım sayfasında boş durumda “Seans içermeyen program paketleri için Siparişlerim’e bakın” notu eklendi.
+- **Frontend (eğitmen):** Paket oluşturma/düzenlemede seans sayısı 0 seçilebiliyor; “0 = seans yok (program paketi; öğrenci programı kendi uygular)” açıklaması ve “Paket süresi (gün)” alanı (örn. 90 = 3 ay) eklendi.
+- **lib/types.ts:** `OrderDto`'ya `packageSessionCount` ve `packageDurationDays` eklendi.
+
+---
+
+## 2026-02-28 - Frontend teknik eksikler (3.4: API path, 401/403, sayfalama)
+
+- **SISTEM_EKSIKLIK_VE_GELISTIRME_ANALIZI §3.4:** Frontend teknik eksikler giderildi.
+- **API path (PascalCase):** Tüm ilgili çağrılar Swagger ile uyumlu hale getirildi: `Order/GetMyOrdersAsync`, `Order/GetSessionsAsync`, `Order/GetAsync?id=`, `TrainerProfile/GetListAsync`, `TrainerProfile/GetAsync?id=`, `TrainerProfile/GetBySlugAsync?slug=`, `FeaturedListing/GetListAsync`. Öğrenci sipariş, seans, sipariş detay; eğitmen listesi; öne çıkan eğitmenler; trainer slug/id sayfaları güncellendi.
+- **401/403 yönlendirme:** `lib/api.ts` içinde `apiFetch` 401/403 döndüğünde token ve kullanıcı temizlenip `/login?redirect=...` ile giriş sayfasına yönlendiriliyor.
+- **Sayfalama (P12):** `DEFAULT_LIST_PARAMS` (skipCount, maxResultCount: 50, sorting) eklendi; öğrenci sipariş/seans/bildirim, eğitmen sipariş/seans, eğitmen listesi, admin destek sayfalarında kullanılıyor.
+- **Tutarlı UI:** `components/ui/ApiState.tsx` — LoadingState, ErrorState, EmptyState bileşenleri eklendi (liste sayfalarında isteğe bağlı kullanım için).
+- **lib/types.ts:** API path yorumu PascalCase olacak şekilde güncellendi.
+
+---
+
+## 2026-02-28 - Frontend eksik sayfalar (paket, mesaj, eğitmen paket/profil)
+
+- **Öncelik 2 (SISTEM_EKSIKLIK_VE_GELISTIRME_ANALIZI):** Eksik sayfalar eklendi.
+- **Öğrenci:** Paketler listesi (`/student/packages`), paket detay + Satın Al (`/student/packages/[id]` → Order/CreateAsync, sipariş detaya yönlendirme), mesajlar (`/student/messages` — GetMyConversationsAsync, GetMessagesAsync, SendMessageAsync, MarkAsReadAsync). Menüye “Mesajlar” linki eklendi.
+- **Eğitmen:** Paketlerim listesi (`/trainer/packages` — GetMyProfileAsync + ServicePackage/GetListAsync), yeni paket (`/trainer/packages/new` — CreateAsync), paket düzenle/sil (`/trainer/packages/[id]` — GetAsync, UpdateAsync, DeleteAsync). Eğitmen profili düzenleme (`/trainer/profile-edit` — TrainerProfile/GetMyProfileAsync, UpdateAsync: slug, bio, şehir, linkler, müsaitlik). Menüde “Sağlık profilim” ve “Eğitmen profili” ayrıldı.
+- **lib/types.ts:** CreateUpdateServicePackageDto, ListResultDto, ConversationDto, MessageDto, SendMessageDto, CreateUpdateTrainerProfileDto eklendi.
+- **lib/auth.ts:** JWT payload parse ve getStoredUser ile `id` (sub) döndürme eklendi; mesajlar sayfasında karşı taraf id için kullanılıyor.
+- **TrainerPackageList:** API path `/api/app/ServicePackage/GetListAsync` olarak düzeltildi.
+
+---
+
+## 2026-02-28 - Frontend placeholder sayfaları gerçek API ile dolduruldu
+
+- **Öncelik 1 (SISTEM_EKSIKLIK_VE_GELISTIRME_ANALIZI):** Placeholder sayfalar kaldırıldı; ilgili sayfalar backend API ile çalışır hale getirildi.
+- **Öğrenci:** Bildirimler (`Notification/GetMyNotificationsAsync`, MarkAsRead, MarkAllAsRead), Destek (GetMyTicketsAsync, CreateAsync — liste + yeni talep formu).
+- **Eğitmen:** Dashboard (Wallet/GetMyWalletAsync, Order/GetTrainerOrdersAsync özeti), Siparişlerim (GetTrainerOrdersAsync), Seanslarım (siparişler üzerinden GetSessionsAsync), Cüzdan (GetMyWalletAsync, GetMyTransactionsAsync), Para çekme (GetMyRequestsAsync, CreateAsync), Bildirimler, Destek (öğrenci ile aynı API).
+- **Admin:** Dashboard (Admin/GetDashboardAsync ile istatistikler), Destek talepleri (SupportTicket/GetListAsync, ReplyAsync), Uyuşmazlıklar (Dispute/GetListAsync, ResolveAsync), Para çekme talepleri (WithdrawalRequest/GetListAsync, ApproveAsync, RejectAsync, MarkProcessedAsync).
+- **lib/types.ts:** NotificationDto, SupportTicketDto, TrainerWalletDto, WalletTransactionDto, WithdrawalRequestDto, DashboardDto, DisputeDto ve ilgili liste/oluşturma tipleri eklendi.
+
+---
+
 ## 2026-03-02 - Marketplace test verileri (Data Seeder)
 
 - **FitliyoMarketplaceDataSeedContributor:** Tüm marketplace entity'leri için anlamlı test verileri eklendi. DbMigrator çalıştığında (önce Identity seed: admin, egitmen, ogrenci), ardından eğitmen profili yoksa: kategoriler (Fitness, Spor Koçluğu, Beslenme, Pilates, Yoga), eğitmen profili (Ahmet Yılmaz, sertifikalar, galeri), abonelik planları (Ücretsiz, Basic, Pro), hizmet paketi, sipariş/seans/ödeme, değerlendirme, mesajlaşma, bildirimler, destek talebi, öne çıkanlar, blog yazıları, kullanıcı profilleri (sağlık), para çekme talebi, uyuşmazlık kaydı seed edilir. Tüm alanlar ilgili property'lere uygun anlamlı değerlerle doldurulur.

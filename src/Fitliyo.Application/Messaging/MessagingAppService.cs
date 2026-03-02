@@ -2,6 +2,8 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Fitliyo.Messaging.Dtos;
+using Fitliyo.Orders;
+using Fitliyo.Trainers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
@@ -16,13 +18,19 @@ public class MessagingAppService : FitliyoAppService, IMessagingAppService
 {
     private readonly IRepository<Conversation, Guid> _conversationRepository;
     private readonly IRepository<Message, Guid> _messageRepository;
+    private readonly IRepository<Order, Guid> _orderRepository;
+    private readonly IRepository<TrainerProfile, Guid> _trainerProfileRepository;
 
     public MessagingAppService(
         IRepository<Conversation, Guid> conversationRepository,
-        IRepository<Message, Guid> messageRepository)
+        IRepository<Message, Guid> messageRepository,
+        IRepository<Order, Guid> orderRepository,
+        IRepository<TrainerProfile, Guid> trainerProfileRepository)
     {
         _conversationRepository = conversationRepository;
         _messageRepository = messageRepository;
+        _orderRepository = orderRepository;
+        _trainerProfileRepository = trainerProfileRepository;
     }
 
     [Authorize]
@@ -110,11 +118,50 @@ public class MessagingAppService : FitliyoAppService, IMessagingAppService
         }
     }
 
+    [Authorize]
+    public async Task<ConversationDto> GetOrCreateConversationForOrderAsync(Guid orderId)
+    {
+        var userId = (CurrentUser.Id ?? Guid.Empty);
+        var order = await _orderRepository.GetAsync(orderId);
+
+        Guid otherUserId;
+        if (order.StudentId == userId)
+        {
+            var trainer = await _trainerProfileRepository.GetAsync(order.TrainerProfileId);
+            otherUserId = trainer.UserId;
+        }
+        else
+        {
+            var trainer = await _trainerProfileRepository.FindAsync(x => x.UserId == userId);
+            if (trainer == null || trainer.Id != order.TrainerProfileId)
+                throw new BusinessException(FitliyoDomainErrorCodes.ConversationNotFound);
+            otherUserId = order.StudentId;
+        }
+
+        var existing = await _conversationRepository.FindAsync(x =>
+            x.OrderId == orderId &&
+            ((x.InitiatorId == userId && x.ParticipantId == otherUserId) ||
+             (x.InitiatorId == otherUserId && x.ParticipantId == userId)));
+
+        if (existing != null)
+        {
+            if (!existing.IsActive) existing.IsActive = true;
+            await _conversationRepository.UpdateAsync(existing);
+            return ObjectMapper.Map<Conversation, ConversationDto>(existing);
+        }
+
+        var conversation = new Conversation(GuidGenerator.Create(), userId, otherUserId, orderId);
+        await _conversationRepository.InsertAsync(conversation);
+        Logger.LogInformation("Siparişe özel konuşma oluşturuldu: {OrderId}, {ConversationId}", orderId, conversation.Id);
+        return ObjectMapper.Map<Conversation, ConversationDto>(conversation);
+    }
+
     private async Task<Conversation> GetOrCreateConversationAsync(Guid userId, Guid recipientId)
     {
         var existing = await _conversationRepository.FindAsync(x =>
-            (x.InitiatorId == userId && x.ParticipantId == recipientId) ||
-            (x.InitiatorId == recipientId && x.ParticipantId == userId));
+            x.OrderId == null &&
+            ((x.InitiatorId == userId && x.ParticipantId == recipientId) ||
+             (x.InitiatorId == recipientId && x.ParticipantId == userId)));
 
         if (existing != null)
         {
@@ -122,7 +169,7 @@ public class MessagingAppService : FitliyoAppService, IMessagingAppService
             return existing;
         }
 
-        var conversation = new Conversation(GuidGenerator.Create(), userId, recipientId);
+        var conversation = new Conversation(GuidGenerator.Create(), userId, recipientId, null);
         await _conversationRepository.InsertAsync(conversation);
         return conversation;
     }

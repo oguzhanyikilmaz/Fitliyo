@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiFetch, buildQuery } from "@/lib/api";
+import { ApiPaths } from "@/lib/api-paths";
 import type { PagedResultDto, ServicePackageDto, GetPackageListDto } from "@/lib/types";
 
 interface TrainerPackageListProps {
@@ -21,7 +22,7 @@ export function TrainerPackageList({ trainerProfileId, isAuthenticated }: Traine
       maxResultCount: 20,
     };
     const query = buildQuery(params as Record<string, string | number | boolean | undefined | null>);
-    apiFetch<PagedResultDto<ServicePackageDto>>(`/api/app/servicePackage${query}`)
+    apiFetch<PagedResultDto<ServicePackageDto>>(ApiPaths.ServicePackage.getListAsync(query))
       .then(setData)
       .catch(() => setData({ items: [], totalCount: 0 }))
       .finally(() => setLoading(false));

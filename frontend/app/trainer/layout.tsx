@@ -7,10 +7,12 @@ import { getStoredUser } from "@/lib/auth";
 
 const nav = [
   { href: "/trainer", label: "Dashboard" },
-  { href: "/trainer/profile", label: "Profilim" },
+  { href: "/trainer/profile", label: "Sağlık profilim" },
+  { href: "/trainer/profile-edit", label: "Eğitmen profili" },
   { href: "/trainer/packages", label: "Paketlerim" },
   { href: "/trainer/orders", label: "Siparişlerim" },
   { href: "/trainer/sessions", label: "Seanslarım" },
+  { href: "/trainer/messages", label: "Mesajlar" },
   { href: "/trainer/wallet", label: "Cüzdan" },
   { href: "/trainer/withdrawals", label: "Para Çekme" },
   { href: "/trainer/notifications", label: "Bildirimler" },

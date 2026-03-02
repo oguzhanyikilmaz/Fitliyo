@@ -21,4 +21,14 @@ public interface IOrderAppService : IApplicationService
     Task<OrderDto> CompleteAsync(Guid id);
 
     Task<PagedResultDto<SessionDto>> GetSessionsAsync(Guid orderId);
+
+    /// <summary>
+    /// Öğrenci: Bu sipariş için eğitmene ileteceği bilgileri günceller (kan değerleri, hedefler vb.).
+    /// </summary>
+    Task<OrderDto> UpdateStudentFormAsync(Guid orderId, UpdateOrderStudentFormDto input);
+
+    /// <summary>
+    /// Eğitmen: Bu siparişe program notu ve/veya dosya linki ekler; isteğe bağlı olarak teslim edildi işaretler.
+    /// </summary>
+    Task<OrderDto> UpdateOrderDeliveryAsync(Guid orderId, UpdateOrderDeliveryDto input);
 }

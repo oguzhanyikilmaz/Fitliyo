@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { ApiPaths } from "@/lib/api-paths";
 import { isAuthenticated } from "@/lib/auth";
 import type { TrainerProfileDto } from "@/lib/types";
 import { TrainerPackageList } from "@/components/trainer/TrainerPackageList";
@@ -17,7 +18,7 @@ export default function TrainerProfileByIdPage() {
 
   useEffect(() => {
     if (!id) return;
-    apiFetch<TrainerProfileDto>(`/api/app/trainerProfile/${id}`)
+    apiFetch<TrainerProfileDto>(ApiPaths.TrainerProfile.getAsync(id))
       .then(setTrainer)
       .catch((e) => setError(e instanceof Error ? e.message : "Profil yüklenemedi"))
       .finally(() => setLoading(false));

@@ -182,13 +182,18 @@ namespace Fitliyo.Migrations
                     b.Property<Guid>("ParticipantId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("OrderId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("InitiatorId");
 
+                    b.HasIndex("OrderId");
+
                     b.HasIndex("ParticipantId");
 
-                    b.HasIndex("InitiatorId", "ParticipantId")
+                    b.HasIndex("InitiatorId", "ParticipantId", "OrderId")
                         .IsUnique();
 
                     b.ToTable("AppConversations", (string)null);
@@ -346,6 +351,24 @@ namespace Fitliyo.Migrations
 
                     b.Property<DateTime?>("PaidAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ProgramDeliveredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ProgramAttachmentUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("StudentFormData")
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
+                    b.Property<DateTime?>("StudentFormSubmittedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TrainerProgramNotes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
 
                     b.Property<string>("PaymentProvider")
                         .HasMaxLength(50)

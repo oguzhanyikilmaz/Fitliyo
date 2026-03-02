@@ -231,8 +231,19 @@ public class FitliyoWebModule : AbpModule
         var app = context.GetApplicationBuilder();
         var env = context.GetEnvironment();
 
-        // CORS en başta: /connect/token gibi OpenIddict endpoint'lerinde yanıt da CORS header alsın
+        // CORS en başta: /connect/token ve API preflight (OPTIONS) yanıtları CORS header alsın
         app.UseCors();
+
+        // Preflight OPTIONS isteklerini 204 ile sonlandır; aksi halde auth/authorization 403 döner ve tarayıcı CORS hatası verir
+        app.Use(async (ctx, next) =>
+        {
+            if (string.Equals(ctx.Request.Method, "OPTIONS", StringComparison.OrdinalIgnoreCase))
+            {
+                ctx.Response.StatusCode = 204;
+                return;
+            }
+            await next();
+        });
 
         if (env.IsDevelopment())
         {
@@ -259,13 +270,15 @@ public class FitliyoWebModule : AbpModule
 
         app.UseUnitOfWork();
         app.UseDynamicClaims();
-        app.UseAuthorization();
 
+        // Swagger ve swagger.json — Authorization'dan ÖNCE; aksi halde /swagger/v1/swagger.json 403 Forbidden döner
         app.UseSwagger();
         app.UseAbpSwaggerUI(options =>
         {
             options.SwaggerEndpoint("/swagger/v1/swagger.json", "Fitliyo API");
         });
+
+        app.UseAuthorization();
 
         app.UseAuditing();
         app.UseAbpSerilogEnrichers();

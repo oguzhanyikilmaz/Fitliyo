@@ -1,10 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
-import type { OrderDto, SessionDto } from "@/lib/types";
+import { ApiPaths } from "@/lib/api-paths";
+import type {
+  ConversationDto,
+  OrderDto,
+  PagedResultDto,
+  SessionDto,
+  UpdateOrderStudentFormDto,
+} from "@/lib/types";
 
 const ORDER_STATUS_LABELS: Record<number, string> = {
   0: "Beklemede",
@@ -37,23 +44,52 @@ function formatDate(s: string) {
 
 export default function StudentOrderDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params?.id as string;
   const [order, setOrder] = useState<OrderDto | null>(null);
   const [sessions, setSessions] = useState<SessionDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [studentFormText, setStudentFormText] = useState("");
+  const [submittingForm, setSubmittingForm] = useState(false);
+  const [messageOrderLoading, setMessageOrderLoading] = useState(false);
 
   useEffect(() => {
     if (!id) return;
-    apiFetch<OrderDto>(`/api/app/order/${id}`)
+    apiFetch<OrderDto>(ApiPaths.Order.getAsync(id))
       .then((o) => {
         setOrder(o);
-        return apiFetch<{ items: SessionDto[] }>(`/api/app/order/getSessions?orderId=${id}`);
+        return apiFetch<PagedResultDto<SessionDto>>(ApiPaths.Order.getSessionsAsync(id));
       })
-      .then((res) => setSessions(res.items ?? []))
+      .then((res) => setSessions((res as PagedResultDto<SessionDto>).items ?? []))
       .catch((e) => setError(e instanceof Error ? e.message : "Sipariş yüklenemedi"))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (order?.studentFormData != null) setStudentFormText(order.studentFormData);
+  }, [order?.studentFormData]);
+
+  const handleSubmitStudentForm = () => {
+    if (!id || submittingForm) return;
+    setSubmittingForm(true);
+    const body: UpdateOrderStudentFormDto = { formData: studentFormText.trim() || undefined };
+    apiFetch<OrderDto>(ApiPaths.Order.updateStudentFormAsync(id), {
+      method: "PUT",
+      body: JSON.stringify(body),
+    })
+      .then((updated) => setOrder(updated))
+      .catch(() => setSubmittingForm(false))
+      .finally(() => setSubmittingForm(false));
+  };
+
+  const handleMessageAboutOrder = () => {
+    if (!id || messageOrderLoading) return;
+    setMessageOrderLoading(true);
+    apiFetch<ConversationDto>(ApiPaths.Messaging.getOrCreateConversationForOrderAsync(id))
+      .then((conv) => router.push(`/student/messages?conversationId=${conv.id}`))
+      .finally(() => setMessageOrderLoading(false));
+  };
 
   if (loading) {
     return (
@@ -99,8 +135,89 @@ export default function StudentOrderDetailPage() {
       </div>
 
       <div className="rounded-xl border bg-white p-6 shadow-sm">
+        <h2 className="font-semibold text-slate-800">Eğitmene ileteceğin bilgiler</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Kan değerleri, hedefler, kronik rahatsızlıklar, diyet kısıtları vb. Eğitmen programını buna göre hazırlar.
+        </p>
+        <textarea
+          value={studentFormText}
+          onChange={(e) => setStudentFormText(e.target.value)}
+          placeholder="Örn: Kan şekerim yüksek, 3 ay sonra yarış hedefim var..."
+          rows={4}
+          className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800"
+        />
+        <button
+          type="button"
+          onClick={handleSubmitStudentForm}
+          disabled={submittingForm}
+          className="mt-2 rounded-lg bg-fitliyo-green px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+        >
+          {submittingForm ? "Gönderiliyor..." : order?.studentFormSubmittedAt ? "Güncelle" : "Eğitmene gönder"}
+        </button>
+        {order?.studentFormSubmittedAt && (
+          <p className="mt-1 text-xs text-slate-500">
+            Son gönderim: {formatDate(order.studentFormSubmittedAt)}
+          </p>
+        )}
+      </div>
+
+      {(order?.trainerProgramNotes != null && order.trainerProgramNotes !== "") ||
+      (order?.programAttachmentUrl != null && order.programAttachmentUrl !== "") ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-6">
+          <h2 className="font-semibold text-emerald-900">Eğitmenin program teslimi</h2>
+          {order?.programDeliveredAt && (
+            <p className="mt-1 text-xs text-emerald-700">
+              Teslim tarihi: {formatDate(order.programDeliveredAt)}
+            </p>
+          )}
+          {order?.trainerProgramNotes != null && order.trainerProgramNotes !== "" && (
+            <div className="mt-2 whitespace-pre-wrap text-sm text-emerald-800">
+              {order.trainerProgramNotes}
+            </div>
+          )}
+          {order?.programAttachmentUrl != null && order.programAttachmentUrl !== "" && (
+            <a
+              href={order.programAttachmentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-block font-medium text-emerald-700 underline hover:text-emerald-900"
+            >
+              Program dosyası / link →
+            </a>
+          )}
+        </div>
+      ) : null}
+
+      <div className="flex flex-wrap gap-3">
+        <button
+          type="button"
+          onClick={handleMessageAboutOrder}
+          disabled={messageOrderLoading}
+          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+        >
+          {messageOrderLoading ? "Açılıyor..." : "Bu sipariş hakkında eğitmenle yazış"}
+        </button>
+      </div>
+
+      <div className="rounded-xl border bg-white p-6 shadow-sm">
         <h2 className="font-semibold text-slate-800">Seanslar</h2>
-        {sessions.length === 0 ? (
+        {sessions.length === 0 &&
+        (order.packageSessionCount == null || order.packageSessionCount === 0) ? (
+          <div className="mt-2 rounded-lg border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-800">
+            <p className="font-medium">Program paketi — seans yok</p>
+            <p className="mt-1">
+              Bu paket bire bir seans içermemektedir. Eğitmenin hazırladığı programı kendi günlük hayatınızda
+              uygulayacaksınız.
+              {order.packageDurationDays != null && order.packageDurationDays > 0 && (
+                <span className="mt-1 block">
+                  Program süresi: {order.packageDurationDays} gün
+                  {order.packageDurationDays >= 30 &&
+                    ` (${Math.round(order.packageDurationDays / 30)} ay)`}.
+                </span>
+              )}
+            </p>
+          </div>
+        ) : sessions.length === 0 ? (
           <p className="mt-2 text-sm text-slate-500">Henüz seans planlanmamış.</p>
         ) : (
           <ul className="mt-3 space-y-2">

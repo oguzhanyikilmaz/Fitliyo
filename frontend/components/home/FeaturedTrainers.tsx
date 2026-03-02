@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiFetch, buildQuery } from "@/lib/api";
+import { ApiPaths } from "@/lib/api-paths";
 import type {
   PagedResultDto,
   FeaturedListingDto,
@@ -25,13 +26,13 @@ export function FeaturedTrainers() {
       sorting: "sortOrder asc",
     };
     const query = buildQuery(params as Record<string, string | number | boolean | undefined | null>);
-    apiFetch<PagedResultDto<FeaturedListingDto>>(`/api/app/featuredListing${query}`)
+    apiFetch<PagedResultDto<FeaturedListingDto>>(ApiPaths.FeaturedListing.getListAsync(query))
       .then((res) => {
         const ids = (res.items ?? [])
           .map((x) => x.trainerProfileId)
           .filter((id): id is string => !!id);
         if (ids.length === 0) return [];
-        return Promise.all(ids.map((id) => apiFetch<TrainerProfileDto>(`/api/app/trainerProfile/${id}`)));
+        return Promise.all(ids.map((tid) => apiFetch<TrainerProfileDto>(ApiPaths.TrainerProfile.getAsync(tid))));
       })
       .then(setTrainers)
       .catch(() => setTrainers([]))

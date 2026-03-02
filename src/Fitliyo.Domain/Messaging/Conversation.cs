@@ -28,15 +28,21 @@ public class Conversation : FullAuditedAggregateRoot<Guid>
     /// </summary>
     public bool IsActive { get; set; }
 
+    /// <summary>
+    /// Bu konuşma belirli bir siparişe mi ait (siparişe özel iletişim)
+    /// </summary>
+    public Guid? OrderId { get; set; }
+
     protected Conversation()
     {
     }
 
-    public Conversation(Guid id, Guid initiatorId, Guid participantId)
+    public Conversation(Guid id, Guid initiatorId, Guid participantId, Guid? orderId = null)
         : base(id)
     {
         InitiatorId = initiatorId;
         ParticipantId = participantId;
+        OrderId = orderId;
         IsActive = true;
     }
 }

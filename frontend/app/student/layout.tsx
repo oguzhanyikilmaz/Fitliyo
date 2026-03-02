@@ -12,6 +12,7 @@ const nav = [
   { href: "/student/packages", label: "Paketler" },
   { href: "/student/orders", label: "Siparişlerim" },
   { href: "/student/sessions", label: "Seanslarım" },
+  { href: "/student/messages", label: "Mesajlar" },
   { href: "/student/notifications", label: "Bildirimler" },
   { href: "/student/support", label: "Destek" },
 ];
