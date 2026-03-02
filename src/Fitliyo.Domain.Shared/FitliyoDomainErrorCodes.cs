@@ -99,6 +99,46 @@ public static class FitliyoDomainErrorCodes
     /// <summary>Bildirim bulunamadı</summary>
     public const string NotificationNotFound = "Fitliyo:Notification:00001";
 
+    /* Payment / Wallet */
+
+    /// <summary>Ödeme kaydı bulunamadı</summary>
+    public const string PaymentNotFound = "Fitliyo:Payment:00001";
+
+    /// <summary>Cüzdan bulunamadı</summary>
+    public const string WalletNotFound = "Fitliyo:Payment:00002";
+
+    /// <summary>Yetersiz bakiye</summary>
+    public const string InsufficientBalance = "Fitliyo:Payment:00003";
+
+    /// <summary>Para çekme talebi bulunamadı</summary>
+    public const string WithdrawalRequestNotFound = "Fitliyo:Payment:00004";
+
+    /* Support */
+
+    /// <summary>Destek talebi bulunamadı</summary>
+    public const string SupportTicketNotFound = "Fitliyo:Support:00001";
+
+    /* Admin / Dispute */
+
+    /// <summary>Uyuşmazlık bulunamadı</summary>
+    public const string DisputeNotFound = "Fitliyo:Admin:00001";
+
+    /// <summary>Öne çıkan listeleme bulunamadı</summary>
+    public const string FeaturedListingNotFound = "Fitliyo:Admin:00002";
+
+    /* Content */
+
+    /// <summary>Blog yazısı bulunamadı</summary>
+    public const string BlogPostNotFound = "Fitliyo:Content:00001";
+
+    /// <summary>Bu slug zaten kullanılıyor</summary>
+    public const string BlogPostSlugAlreadyExists = "Fitliyo:Content:00002";
+
+    /* Profile */
+
+    /// <summary>Kullanıcı giriş yapmamış</summary>
+    public const string UserNotLoggedIn = "Fitliyo:Profile:00001";
+
     /* Genel */
 
     /// <summary>Kayıt bulunamadı</summary>

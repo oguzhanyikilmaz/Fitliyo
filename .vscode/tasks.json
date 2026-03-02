@@ -110,12 +110,32 @@
       }
     },
     {
+      "label": "Frontend: npm install",
+      "type": "shell",
+      "command": "npm",
+      "args": ["install"],
+      "options": { "cwd": "${workspaceFolder}/frontend" },
+      "problemMatcher": [],
+      "group": "build",
+      "presentation": { "echo": true, "reveal": "always", "focus": false, "panel": "shared" }
+    },
+    {
+      "label": "Frontend: npm run dev",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "dev"],
+      "options": { "cwd": "${workspaceFolder}/frontend" },
+      "problemMatcher": [],
+      "isBackground": true,
+      "presentation": { "echo": true, "reveal": "always", "focus": false, "panel": "dedicated" }
+    },
+    {
       "label": "Fitliyo: Build Solution",
       "type": "shell",
       "command": "dotnet",
       "args": [
         "build",
-        "${workspaceFolder}/Fitliyo.sln"
+        "${workspaceFolder}/Fitliyo.slnx"
       ],
       "group": {
         "kind": "build",
@@ -137,7 +157,7 @@
       "command": "dotnet",
       "args": [
         "clean",
-        "${workspaceFolder}/Fitliyo.sln"
+        "${workspaceFolder}/Fitliyo.slnx"
       ],
       "group": "build",
       "presentation": {
@@ -155,7 +175,7 @@
       "command": "dotnet",
       "args": [
         "restore",
-        "${workspaceFolder}/Fitliyo.sln"
+        "${workspaceFolder}/Fitliyo.slnx"
       ],
       "group": "build",
       "presentation": {
@@ -233,7 +253,7 @@
       "command": "dotnet",
       "args": [
         "test",
-        "Fitliyo.sln"
+        "${workspaceFolder}/Fitliyo.slnx"
       ],
       "group": "test",
       "presentation": {

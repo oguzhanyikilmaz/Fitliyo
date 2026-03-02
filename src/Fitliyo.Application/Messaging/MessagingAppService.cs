@@ -28,7 +28,7 @@ public class MessagingAppService : FitliyoAppService, IMessagingAppService
     [Authorize]
     public async Task<ListResultDto<ConversationDto>> GetMyConversationsAsync()
     {
-        var userId = CurrentUser.GetId();
+        var userId = (CurrentUser.Id ?? Guid.Empty);
         var conversations = await _conversationRepository.GetListAsync(
             x => (x.InitiatorId == userId || x.ParticipantId == userId) && x.IsActive);
 
@@ -41,7 +41,7 @@ public class MessagingAppService : FitliyoAppService, IMessagingAppService
     [Authorize]
     public async Task<PagedResultDto<MessageDto>> GetMessagesAsync(Guid conversationId, PagedResultRequestDto input)
     {
-        var userId = CurrentUser.GetId();
+        var userId = (CurrentUser.Id ?? Guid.Empty);
         var conversation = await _conversationRepository.GetAsync(conversationId);
 
         if (conversation.InitiatorId != userId && conversation.ParticipantId != userId)
@@ -70,7 +70,7 @@ public class MessagingAppService : FitliyoAppService, IMessagingAppService
     [Authorize]
     public async Task<MessageDto> SendMessageAsync(SendMessageDto input)
     {
-        var userId = CurrentUser.GetId();
+        var userId = (CurrentUser.Id ?? Guid.Empty);
 
         if (input.RecipientId == userId)
             throw new BusinessException(FitliyoDomainErrorCodes.CannotMessageSelf);
@@ -95,7 +95,7 @@ public class MessagingAppService : FitliyoAppService, IMessagingAppService
     [Authorize]
     public async Task MarkAsReadAsync(Guid conversationId)
     {
-        var userId = CurrentUser.GetId();
+        var userId = (CurrentUser.Id ?? Guid.Empty);
         var unreadMessages = await _messageRepository.GetListAsync(
             x => x.ConversationId == conversationId && x.SenderId != userId && !x.IsRead);
 

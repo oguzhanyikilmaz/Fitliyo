@@ -68,7 +68,7 @@ public class ReviewAppService : FitliyoAppService, IReviewAppService
     [Authorize]
     public async Task<ReviewDto> CreateAsync(CreateReviewDto input)
     {
-        var userId = CurrentUser.GetId();
+        var userId = (CurrentUser.Id ?? Guid.Empty);
         var order = await _orderRepository.GetAsync(input.OrderId);
 
         if (order.StudentId != userId)
@@ -104,7 +104,7 @@ public class ReviewAppService : FitliyoAppService, IReviewAppService
     public async Task<ReviewDto> ReplyAsync(Guid id, ReplyToReviewDto input)
     {
         var review = await _reviewRepository.GetAsync(id);
-        var userId = CurrentUser.GetId();
+        var userId = (CurrentUser.Id ?? Guid.Empty);
 
         var trainerProfile = await _trainerProfileRepository.GetAsync(review.TrainerProfileId);
         if (trainerProfile.UserId != userId)

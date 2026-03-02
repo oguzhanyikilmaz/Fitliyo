@@ -150,7 +150,7 @@ public class ServicePackageAppService : FitliyoAppService, IServicePackageAppSer
 
     private async Task<TrainerProfile> GetCurrentTrainerProfileAsync()
     {
-        var userId = CurrentUser.GetId();
+        var userId = (CurrentUser.Id ?? Guid.Empty);
         var trainerProfile = await _trainerProfileRepository.FindAsync(x => x.UserId == userId);
         if (trainerProfile == null)
         {
@@ -162,7 +162,7 @@ public class ServicePackageAppService : FitliyoAppService, IServicePackageAppSer
     private async Task CheckPackageOwnershipAsync(ServicePackage package)
     {
         var trainerProfile = await _trainerProfileRepository.GetAsync(package.TrainerProfileId);
-        if (trainerProfile.UserId != CurrentUser.GetId())
+        if (trainerProfile.UserId != (CurrentUser.Id ?? Guid.Empty))
         {
             var isAdmin = await AuthorizationService.IsGrantedAsync(FitliyoPermissions.Packages.Edit);
             if (!isAdmin)

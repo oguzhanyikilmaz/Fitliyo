@@ -1,3 +1,5 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Volo.Abp.Account;
 using Volo.Abp.AutoMapper;
 using Volo.Abp.FeatureManagement;
@@ -6,6 +8,7 @@ using Volo.Abp.Modularity;
 using Volo.Abp.PermissionManagement;
 using Volo.Abp.SettingManagement;
 using Volo.Abp.TenantManagement;
+using Fitliyo.Account;
 
 namespace Fitliyo;
 
@@ -28,5 +31,8 @@ public class FitliyoApplicationModule : AbpModule
         {
             options.AddMaps<FitliyoApplicationModule>();
         });
+
+        context.Services.Replace(
+            ServiceDescriptor.Transient<IAccountAppService, FitliyoAccountAppService>());
     }
 }

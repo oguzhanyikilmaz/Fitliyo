@@ -61,5 +61,38 @@ public static class FitliyoPermissions
     {
         public const string Dashboard = GroupName + ".Admin.Dashboard";
         public const string UserManagement = GroupName + ".Admin.UserManagement";
+        public const string FeaturedListings = GroupName + ".Admin.FeaturedListings";
+        public const string Disputes = GroupName + ".Admin.Disputes";
+    }
+
+    public static class Payments
+    {
+        public const string Default = GroupName + ".Payments";
+        public const string View = Default + ".View";
+    }
+
+    public static class Wallet
+    {
+        public const string Default = GroupName + ".Wallet";
+    }
+
+    public static class Withdrawal
+    {
+        public const string Default = GroupName + ".Withdrawal";
+        public const string Manage = GroupName + ".Withdrawal.Manage";
+    }
+
+    public static class Support
+    {
+        public const string Default = GroupName + ".Support";
+        public const string Manage = GroupName + ".Support.Manage";
+    }
+
+    public static class Content
+    {
+        public const string Default = GroupName + ".Content";
+        public const string Create = Default + ".Create";
+        public const string Edit = Default + ".Edit";
+        public const string Delete = Default + ".Delete";
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +12,9 @@ public class Program
 {
     public async static Task<int> Main(string[] args)
     {
+        // PostgreSQL timestamptz için: Npgsql 6+ yalnızca UTC kabul eder; ABP/Identity SecurityLog DateTime.Now (Local) kullandığı için legacy davranışı açıyoruz.
+        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
         Log.Logger = new LoggerConfiguration()
 #if DEBUG
             .MinimumLevel.Debug()

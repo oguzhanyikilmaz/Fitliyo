@@ -10,6 +10,7 @@ public static class OrderConsts
     public const int MaxPaymentProviderLength = 50;
     public const int MaxMeetingUrlLength = 512;
     public const int MaxSessionNotesLength = 1000;
+    public const int MaxLocationLength = 256;
     public const string DefaultCurrency = "TRY";
     public const decimal PlatformCommissionRate = 0.15m;
 }

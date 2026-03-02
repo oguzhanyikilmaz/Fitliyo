@@ -1,11 +1,16 @@
+using Fitliyo.Admin;
 using Fitliyo.Categories;
+using Fitliyo.Content;
 using Fitliyo.Messaging;
 using Fitliyo.Notifications;
 using Fitliyo.Orders;
+using Fitliyo.Payments;
 using Fitliyo.ServicePackages;
 using Fitliyo.Reviews;
 using Fitliyo.Subscriptions;
+using Fitliyo.Support;
 using Fitliyo.Trainers;
+using Fitliyo.Profiles;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp.AuditLogging.EntityFrameworkCore;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
@@ -49,6 +54,16 @@ public class FitliyoDbContext :
     public DbSet<Notification> Notifications { get; set; }
     public DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
     public DbSet<TrainerSubscription> TrainerSubscriptions { get; set; }
+    public DbSet<Payment> Payments { get; set; }
+    public DbSet<TrainerWallet> TrainerWallets { get; set; }
+    public DbSet<WalletTransaction> WalletTransactions { get; set; }
+    public DbSet<WithdrawalRequest> WithdrawalRequests { get; set; }
+    public DbSet<ReviewHelpfulVote> ReviewHelpfulVotes { get; set; }
+    public DbSet<SupportTicket> SupportTickets { get; set; }
+    public DbSet<FeaturedListing> FeaturedListings { get; set; }
+    public DbSet<Dispute> Disputes { get; set; }
+    public DbSet<BlogPost> BlogPosts { get; set; }
+    public DbSet<UserProfile> UserProfiles { get; set; }
 
     #endregion
 

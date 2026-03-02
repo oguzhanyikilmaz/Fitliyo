@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -124,6 +124,22 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
                 scopes: commonScopes,
                 redirectUri: $"{swaggerRootUrl}/swagger/oauth2-redirect.html",
                 clientUri: swaggerRootUrl
+            );
+        }
+
+        // Fitliyo_App: SPA / mobil için Resource Owner Password grant (giriş sayfası token alır)
+        var appClientId = configurationSection["Fitliyo_App:ClientId"];
+        if (!string.IsNullOrWhiteSpace(appClientId))
+        {
+            await CreateApplicationAsync(
+                name: appClientId!,
+                type: OpenIddictConstants.ClientTypes.Public,
+                consentType: OpenIddictConstants.ConsentTypes.Implicit,
+                displayName: "Fitliyo SPA / Mobile",
+                secret: null,
+                grantTypes: new List<string> { OpenIddictConstants.GrantTypes.Password, OpenIddictConstants.GrantTypes.RefreshToken },
+                scopes: commonScopes,
+                clientUri: configurationSection["Fitliyo_App:RootUrl"]?.TrimEnd('/')
             );
         }
     }

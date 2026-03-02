@@ -80,6 +80,10 @@ This is a layered monolith application that consists of the following applicatio
 | 9 | ContentModule | Blog, categories, SEO |
 | 10 | AdminModule | Reports, moderation, support |
 
+### Running the application
+
+See **[docs/CALISTIRMA.md](docs/CALISTIRMA.md)** for step-by-step instructions (database setup, backend, frontend, and VS Code launch/tasks).
+
 ### Documentation
 
 Full documentation is available at [`docs/README.md`](docs/README.md).

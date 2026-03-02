@@ -4,6 +4,10 @@
 
 **Platform:** Fitliyo — Personal trainer, diyetisyen, basketbol/futbol ve diğer spor koçlarını öğrencilerle buluşturan çok taraflı marketplace platformu.
 
+**Projeyi çalıştırma:** [Çalıştırma rehberi (CALISTIRMA.md)](CALISTIRMA.md) — Backend, frontend, DbMigrator ve VS Code launch/task kullanımı.
+
+**Seed kullanıcılar:** [SEED_KULLANICILAR.md](SEED_KULLANICILAR.md) — DbMigrator sonrası admin, egitmen, ogrenci hesapları (şifre: Test123!).
+
 > **Not:** Web frontend (Next.js 15) ve mobil (React Native + Expo) ayrı repo'larda geliştirilmektedir. Bu repoda UI/UX dokümantasyonu tutulmaz. Frontend ekibi için gereken bilgiler burada **API sözleşmesi** (endpoint'ler, izinler, error formatı, header'lar, cache davranışları) seviyesinde yer alır.
 
 ---
@@ -67,6 +71,14 @@
 
 - **Yetkilendirme sistemi**: [`docs/AUTHORIZATION-SYSTEM.md`](AUTHORIZATION-SYSTEM.md)
 - **Authentication akışı**: [`docs/security/AUTH_LOGIN_AND_CORS.md`](security/AUTH_LOGIN_AND_CORS.md)
+
+## 🌐 Web Frontend Planı
+
+- **Frontend planı:** [`docs/FRONTEND_PLANI.md`](FRONTEND_PLANI.md) — Rol bazlı (Öğrenci / Eğitmen / Admin) sayfa yapısı, kullanılacak API’ler, uygulama fazları ve klasör yapısı. Sıradan admin paneli değil; öğrenci/eğitmen için marketplace deneyimi hedeflenir.
+
+## 📖 Proje Rehberi (Tek Dokümanda Özet)
+
+- **Proje rehberi:** [`docs/PROJE_REHBERI.md`](PROJE_REHBERI.md) — Proje nedir, amacı ne; şu ana kadar neler yapıldı; tüm entity'ler ve iş anlamları; iş kuralları özeti; proje neler yapabilir; ileriye dönük neler yapılabilir. Yeni katılanlar ve ürün/geliştirme için tek giriş noktası.
 
 ## 📋 Proje Analizi ve Eksiklikler
 

@@ -164,7 +164,7 @@ public class SubscriptionAppService : FitliyoAppService, ISubscriptionAppService
 
     private async Task<TrainerProfile> GetCurrentTrainerProfileAsync()
     {
-        var userId = CurrentUser.GetId();
+        var userId = (CurrentUser.Id ?? Guid.Empty);
         var trainerProfile = await _trainerProfileRepository.FindAsync(x => x.UserId == userId);
         if (trainerProfile == null)
             throw new BusinessException(FitliyoDomainErrorCodes.TrainerProfileNotFound);

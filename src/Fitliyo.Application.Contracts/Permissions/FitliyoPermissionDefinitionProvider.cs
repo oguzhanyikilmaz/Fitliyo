@@ -41,6 +41,20 @@ public class FitliyoPermissionDefinitionProvider : PermissionDefinitionProvider
 
         var admin = fitliyoGroup.AddPermission(FitliyoPermissions.Admin.Dashboard, L("Permission:Admin.Dashboard"));
         fitliyoGroup.AddPermission(FitliyoPermissions.Admin.UserManagement, L("Permission:Admin.UserManagement"));
+        fitliyoGroup.AddPermission(FitliyoPermissions.Admin.FeaturedListings, L("Permission:Admin.FeaturedListings"));
+        fitliyoGroup.AddPermission(FitliyoPermissions.Admin.Disputes, L("Permission:Admin.Disputes"));
+
+        fitliyoGroup.AddPermission(FitliyoPermissions.Payments.Default, L("Permission:Payments"));
+        fitliyoGroup.AddPermission(FitliyoPermissions.Payments.View, L("Permission:Payments.View"));
+        fitliyoGroup.AddPermission(FitliyoPermissions.Wallet.Default, L("Permission:Wallet"));
+        fitliyoGroup.AddPermission(FitliyoPermissions.Withdrawal.Default, L("Permission:Withdrawal"));
+        fitliyoGroup.AddPermission(FitliyoPermissions.Withdrawal.Manage, L("Permission:Withdrawal.Manage"));
+        fitliyoGroup.AddPermission(FitliyoPermissions.Support.Default, L("Permission:Support"));
+        fitliyoGroup.AddPermission(FitliyoPermissions.Support.Manage, L("Permission:Support.Manage"));
+        var content = fitliyoGroup.AddPermission(FitliyoPermissions.Content.Default, L("Permission:Content"));
+        content.AddChild(FitliyoPermissions.Content.Create, L("Permission:Content.Create"));
+        content.AddChild(FitliyoPermissions.Content.Edit, L("Permission:Content.Edit"));
+        content.AddChild(FitliyoPermissions.Content.Delete, L("Permission:Content.Delete"));
     }
 
     private static LocalizableString L(string name)

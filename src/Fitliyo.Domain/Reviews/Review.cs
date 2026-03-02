@@ -21,10 +21,38 @@ public class Review : FullAuditedAggregateRoot<Guid>
     public Guid TrainerProfileId { get; private set; }
 
     /// <summary>
-    /// Puan (1-5)
+    /// Hangi paket için yorum (opsiyonel)
+    /// </summary>
+    public Guid? ServicePackageId { get; set; }
+
+    /// <summary>
+    /// Genel puan (1-5) — geriye uyumluluk için
     /// </summary>
     [Range(ReviewConsts.MinRating, ReviewConsts.MaxRating)]
     public int Rating { get; set; }
+
+    /// <summary>
+    /// Ortalama puan (alt kriterlerin ortalaması veya tek puan)
+    /// </summary>
+    public decimal OverallRating { get; set; }
+
+    [Range(ReviewConsts.MinRating, ReviewConsts.MaxRating)]
+    public int? CommunicationRating { get; set; }
+
+    [Range(ReviewConsts.MinRating, ReviewConsts.MaxRating)]
+    public int? ExpertiseRating { get; set; }
+
+    [Range(ReviewConsts.MinRating, ReviewConsts.MaxRating)]
+    public int? ValueForMoneyRating { get; set; }
+
+    [Range(ReviewConsts.MinRating, ReviewConsts.MaxRating)]
+    public int? PunctualityRating { get; set; }
+
+    public bool IsVerifiedPurchase { get; set; }
+
+    public bool IsPublished { get; set; } = true;
+
+    public int HelpfulCount { get; set; }
 
     [StringLength(ReviewConsts.MaxCommentLength)]
     public string? Comment { get; set; }
@@ -53,6 +81,7 @@ public class Review : FullAuditedAggregateRoot<Guid>
         StudentId = studentId;
         TrainerProfileId = trainerProfileId;
         Rating = Check.Range(rating, nameof(rating), ReviewConsts.MinRating, ReviewConsts.MaxRating);
+        OverallRating = rating;
     }
 
     public void SetTrainerReply(string reply)

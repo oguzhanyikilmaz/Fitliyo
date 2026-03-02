@@ -1,11 +1,16 @@
+using Fitliyo.Admin;
 using Fitliyo.Categories;
+using Fitliyo.Content;
 using Fitliyo.Messaging;
 using Fitliyo.Notifications;
 using Fitliyo.Orders;
+using Fitliyo.Payments;
 using Fitliyo.ServicePackages;
 using Fitliyo.Reviews;
 using Fitliyo.Subscriptions;
+using Fitliyo.Support;
 using Fitliyo.Trainers;
+using Fitliyo.Profiles;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp;
 using Volo.Abp.EntityFrameworkCore.Modeling;
@@ -39,6 +44,24 @@ public static class FitliyoDbContextModelCreatingExtensions
             b.HasIndex(x => x.TrainerType);
             b.HasIndex(x => x.IsActive);
             b.HasIndex(x => x.City);
+        });
+
+        /* UserProfile */
+        builder.Entity<UserProfile>(b =>
+        {
+            b.ToTable(FitliyoConsts.DbTablePrefix + "UserProfiles", FitliyoConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.BloodType).HasMaxLength(UserProfileConsts.MaxBloodTypeLength);
+            b.Property(x => x.ChronicConditions).HasMaxLength(UserProfileConsts.MaxChronicConditionsLength);
+            b.Property(x => x.Allergies).HasMaxLength(UserProfileConsts.MaxAllergiesLength);
+            b.Property(x => x.Medications).HasMaxLength(UserProfileConsts.MaxMedicationsLength);
+            b.Property(x => x.Injuries).HasMaxLength(UserProfileConsts.MaxInjuriesLength);
+            b.Property(x => x.EmergencyContact).HasMaxLength(UserProfileConsts.MaxEmergencyContactLength);
+            b.Property(x => x.Phone).HasMaxLength(UserProfileConsts.MaxPhoneLength);
+            b.Property(x => x.Notes).HasMaxLength(UserProfileConsts.MaxNotesLength);
+            b.Property(x => x.DoctorNotes).HasMaxLength(UserProfileConsts.MaxDoctorNotesLength);
+            b.Property(x => x.AlcoholConsumption).HasMaxLength(UserProfileConsts.MaxAlcoholConsumptionLength);
+            b.HasIndex(x => x.UserId).IsUnique();
         });
 
         /* TrainerCertificate */
@@ -192,6 +215,7 @@ public static class FitliyoDbContextModelCreatingExtensions
             b.HasIndex(x => x.StudentId);
             b.HasIndex(x => x.TrainerProfileId);
             b.HasIndex(x => x.Status);
+            b.HasIndex(x => x.PaymentId);
 
             b.HasOne<TrainerProfile>()
                 .WithMany()
@@ -213,16 +237,23 @@ public static class FitliyoDbContextModelCreatingExtensions
             b.Property(x => x.MeetingUrl).HasMaxLength(OrderConsts.MaxMeetingUrlLength);
             b.Property(x => x.TrainerNotes).HasMaxLength(OrderConsts.MaxSessionNotesLength);
             b.Property(x => x.StudentNotes).HasMaxLength(OrderConsts.MaxSessionNotesLength);
+            b.Property(x => x.Location).HasMaxLength(OrderConsts.MaxLocationLength);
 
             b.HasIndex(x => x.OrderId);
             b.HasIndex(x => x.TrainerProfileId);
             b.HasIndex(x => x.StudentId);
             b.HasIndex(x => x.ScheduledStartTime);
+            b.HasIndex(x => x.RescheduledFromSessionId);
 
             b.HasOne<Order>()
                 .WithMany()
                 .HasForeignKey(x => x.OrderId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            b.HasOne<Session>()
+                .WithMany()
+                .HasForeignKey(x => x.RescheduledFromSessionId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         /* Review */
@@ -233,11 +264,13 @@ public static class FitliyoDbContextModelCreatingExtensions
 
             b.Property(x => x.Comment).HasMaxLength(ReviewConsts.MaxCommentLength);
             b.Property(x => x.TrainerReply).HasMaxLength(ReviewConsts.MaxReplyLength);
+            b.Property(x => x.OverallRating).HasPrecision(3, 2);
 
             b.HasIndex(x => x.OrderId).IsUnique();
             b.HasIndex(x => x.TrainerProfileId);
             b.HasIndex(x => x.StudentId);
             b.HasIndex(x => x.Rating);
+            b.HasIndex(x => x.ServicePackageId);
 
             b.HasOne<Order>()
                 .WithMany()
@@ -247,6 +280,11 @@ public static class FitliyoDbContextModelCreatingExtensions
             b.HasOne<TrainerProfile>()
                 .WithMany()
                 .HasForeignKey(x => x.TrainerProfileId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            b.HasOne<ServicePackage>()
+                .WithMany()
+                .HasForeignKey(x => x.ServicePackageId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -337,6 +375,179 @@ public static class FitliyoDbContextModelCreatingExtensions
                 .WithMany()
                 .HasForeignKey(x => x.SubscriptionPlanId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        /* Payment */
+        builder.Entity<Payment>(b =>
+        {
+            b.ToTable(FitliyoConsts.DbTablePrefix + "Payments", FitliyoConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.ProviderPaymentId).IsRequired().HasMaxLength(PaymentConsts.MaxProviderPaymentIdLength);
+            b.Property(x => x.Currency).IsRequired().HasMaxLength(PaymentConsts.MaxCurrencyLength);
+            b.Property(x => x.Amount).HasPrecision(18, 2);
+            b.Property(x => x.RefundAmount).HasPrecision(18, 2);
+            b.Property(x => x.ReceiptUrl).HasMaxLength(PaymentConsts.MaxReceiptUrlLength);
+            b.Property(x => x.CardLastFour).HasMaxLength(PaymentConsts.MaxCardLastFourLength);
+            b.Property(x => x.ProviderResponse).HasMaxLength(PaymentConsts.MaxProviderResponseLength);
+
+            b.HasIndex(x => x.OrderId).IsUnique();
+            b.HasIndex(x => x.ProviderPaymentId);
+            b.HasIndex(x => x.Status);
+
+            b.HasOne<Order>()
+                .WithMany()
+                .HasForeignKey(x => x.OrderId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        /* TrainerWallet */
+        builder.Entity<TrainerWallet>(b =>
+        {
+            b.ToTable(FitliyoConsts.DbTablePrefix + "TrainerWallets", FitliyoConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.AvailableBalance).HasPrecision(18, 2);
+            b.Property(x => x.PendingBalance).HasPrecision(18, 2);
+            b.Property(x => x.TotalEarned).HasPrecision(18, 2);
+            b.Property(x => x.TotalWithdrawn).HasPrecision(18, 2);
+
+            b.HasIndex(x => x.TrainerProfileId).IsUnique();
+
+            b.HasOne<TrainerProfile>()
+                .WithMany()
+                .HasForeignKey(x => x.TrainerProfileId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        /* WalletTransaction */
+        builder.Entity<WalletTransaction>(b =>
+        {
+            b.ToTable(FitliyoConsts.DbTablePrefix + "WalletTransactions", FitliyoConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.Description).IsRequired().HasMaxLength(WalletConsts.MaxDescriptionLength);
+            b.Property(x => x.Amount).HasPrecision(18, 2);
+            b.Property(x => x.BalanceAfter).HasPrecision(18, 2);
+
+            b.HasIndex(x => x.TrainerWalletId);
+            b.HasIndex(x => x.TransactionType);
+
+            b.HasOne<TrainerWallet>()
+                .WithMany()
+                .HasForeignKey(x => x.TrainerWalletId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        /* WithdrawalRequest */
+        builder.Entity<WithdrawalRequest>(b =>
+        {
+            b.ToTable(FitliyoConsts.DbTablePrefix + "WithdrawalRequests", FitliyoConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.Amount).HasPrecision(18, 2);
+            b.Property(x => x.Iban).IsRequired().HasMaxLength(WithdrawalConsts.MaxIbanLength);
+            b.Property(x => x.AccountHolderName).IsRequired().HasMaxLength(WithdrawalConsts.MaxAccountHolderNameLength);
+            b.Property(x => x.AdminNote).HasMaxLength(WithdrawalConsts.MaxAdminNoteLength);
+
+            b.HasIndex(x => x.TrainerWalletId);
+            b.HasIndex(x => x.Status);
+
+            b.HasOne<TrainerWallet>()
+                .WithMany()
+                .HasForeignKey(x => x.TrainerWalletId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        /* ReviewHelpfulVote */
+        builder.Entity<ReviewHelpfulVote>(b =>
+        {
+            b.ToTable(FitliyoConsts.DbTablePrefix + "ReviewHelpfulVotes", FitliyoConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.HasIndex(x => x.ReviewId);
+            b.HasIndex(x => x.VoterUserId);
+            b.HasIndex(x => new { x.ReviewId, x.VoterUserId }).IsUnique();
+
+            b.HasOne<Review>()
+                .WithMany()
+                .HasForeignKey(x => x.ReviewId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        /* SupportTicket */
+        builder.Entity<SupportTicket>(b =>
+        {
+            b.ToTable(FitliyoConsts.DbTablePrefix + "SupportTickets", FitliyoConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.Subject).IsRequired().HasMaxLength(SupportTicketConsts.MaxSubjectLength);
+            b.Property(x => x.Message).IsRequired().HasMaxLength(SupportTicketConsts.MaxMessageLength);
+            b.Property(x => x.AdminReply).HasMaxLength(SupportTicketConsts.MaxAdminReplyLength);
+
+            b.HasIndex(x => x.UserId);
+            b.HasIndex(x => x.Status);
+            b.HasIndex(x => x.Category);
+        });
+
+        /* FeaturedListing */
+        builder.Entity<FeaturedListing>(b =>
+        {
+            b.ToTable(FitliyoConsts.DbTablePrefix + "FeaturedListings", FitliyoConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.AdminNote).HasMaxLength(FeaturedListingConsts.MaxNoteLength);
+
+            b.HasIndex(x => x.PageType);
+            b.HasIndex(x => x.TrainerProfileId);
+            b.HasIndex(x => x.ServicePackageId);
+            b.HasIndex(x => x.IsActive);
+
+            b.HasOne<TrainerProfile>()
+                .WithMany()
+                .HasForeignKey(x => x.TrainerProfileId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            b.HasOne<ServicePackage>()
+                .WithMany()
+                .HasForeignKey(x => x.ServicePackageId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        /* Dispute */
+        builder.Entity<Dispute>(b =>
+        {
+            b.ToTable(FitliyoConsts.DbTablePrefix + "Disputes", FitliyoConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.Description).IsRequired().HasMaxLength(DisputeConsts.MaxDescriptionLength);
+            b.Property(x => x.ResolutionNote).HasMaxLength(DisputeConsts.MaxResolutionNoteLength);
+
+            b.HasIndex(x => x.OrderId);
+            b.HasIndex(x => x.Status);
+
+            b.HasOne<Order>()
+                .WithMany()
+                .HasForeignKey(x => x.OrderId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        /* BlogPost */
+        builder.Entity<BlogPost>(b =>
+        {
+            b.ToTable(FitliyoConsts.DbTablePrefix + "BlogPosts", FitliyoConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.Title).IsRequired().HasMaxLength(BlogPostConsts.MaxTitleLength);
+            b.Property(x => x.Slug).IsRequired().HasMaxLength(BlogPostConsts.MaxSlugLength);
+            b.Property(x => x.Summary).HasMaxLength(BlogPostConsts.MaxSummaryLength);
+            b.Property(x => x.Body).IsRequired().HasMaxLength(BlogPostConsts.MaxBodyLength);
+            b.Property(x => x.AuthorName).HasMaxLength(BlogPostConsts.MaxAuthorNameLength);
+            b.Property(x => x.FeaturedImageUrl).HasMaxLength(BlogPostConsts.MaxFeaturedImageUrlLength);
+
+            b.HasIndex(x => x.Slug).IsUnique();
+            b.HasIndex(x => x.Status);
+            b.HasIndex(x => x.PublishedAt);
         });
     }
 }

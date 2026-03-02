@@ -23,7 +23,7 @@ public class NotificationAppService : FitliyoAppService, INotificationAppService
     [Authorize]
     public async Task<PagedResultDto<NotificationDto>> GetMyNotificationsAsync(GetNotificationListDto input)
     {
-        var userId = CurrentUser.GetId();
+        var userId = (CurrentUser.Id ?? Guid.Empty);
         var queryable = await _notificationRepository.GetQueryableAsync();
 
         queryable = queryable.Where(x => x.UserId == userId);
@@ -47,7 +47,7 @@ public class NotificationAppService : FitliyoAppService, INotificationAppService
     [Authorize]
     public async Task<int> GetUnreadCountAsync()
     {
-        var userId = CurrentUser.GetId();
+        var userId = (CurrentUser.Id ?? Guid.Empty);
         var queryable = await _notificationRepository.GetQueryableAsync();
         return await AsyncExecuter.CountAsync(queryable.Where(x => x.UserId == userId && !x.IsRead));
     }
@@ -56,7 +56,7 @@ public class NotificationAppService : FitliyoAppService, INotificationAppService
     public async Task MarkAsReadAsync(Guid id)
     {
         var notification = await _notificationRepository.GetAsync(id);
-        var userId = CurrentUser.GetId();
+        var userId = (CurrentUser.Id ?? Guid.Empty);
 
         if (notification.UserId != userId) return;
 
@@ -67,7 +67,7 @@ public class NotificationAppService : FitliyoAppService, INotificationAppService
     [Authorize]
     public async Task MarkAllAsReadAsync()
     {
-        var userId = CurrentUser.GetId();
+        var userId = (CurrentUser.Id ?? Guid.Empty);
         var unread = await _notificationRepository.GetListAsync(x => x.UserId == userId && !x.IsRead);
 
         foreach (var n in unread)

@@ -40,7 +40,7 @@ public class OrderAppService : FitliyoAppService, IOrderAppService
     public async Task<OrderDto> GetAsync(Guid id)
     {
         var order = await _orderRepository.GetAsync(id);
-        var userId = CurrentUser.GetId();
+        var userId = (CurrentUser.Id ?? Guid.Empty);
 
         if (order.StudentId != userId)
         {
@@ -57,7 +57,7 @@ public class OrderAppService : FitliyoAppService, IOrderAppService
     [Authorize]
     public async Task<PagedResultDto<OrderDto>> GetMyOrdersAsync(GetOrderListDto input)
     {
-        var userId = CurrentUser.GetId();
+        var userId = (CurrentUser.Id ?? Guid.Empty);
         var queryable = await _orderRepository.GetQueryableAsync();
 
         queryable = queryable.Where(x => x.StudentId == userId);
@@ -83,7 +83,7 @@ public class OrderAppService : FitliyoAppService, IOrderAppService
     [Authorize]
     public async Task<PagedResultDto<OrderDto>> GetTrainerOrdersAsync(GetOrderListDto input)
     {
-        var userId = CurrentUser.GetId();
+        var userId = (CurrentUser.Id ?? Guid.Empty);
         var trainerProfile = await _trainerProfileRepository.FindAsync(x => x.UserId == userId);
         if (trainerProfile == null)
             throw new BusinessException(FitliyoDomainErrorCodes.TrainerProfileNotFound);
@@ -109,7 +109,7 @@ public class OrderAppService : FitliyoAppService, IOrderAppService
     [Authorize]
     public async Task<OrderDto> CreateAsync(CreateOrderDto input)
     {
-        var userId = CurrentUser.GetId();
+        var userId = (CurrentUser.Id ?? Guid.Empty);
         var package = await _packageRepository.GetAsync(input.ServicePackageId);
         var trainerProfile = await _trainerProfileRepository.GetAsync(package.TrainerProfileId);
 
@@ -140,7 +140,7 @@ public class OrderAppService : FitliyoAppService, IOrderAppService
     public async Task<OrderDto> CancelAsync(Guid id, string? reason)
     {
         var order = await _orderRepository.GetAsync(id);
-        var userId = CurrentUser.GetId();
+        var userId = (CurrentUser.Id ?? Guid.Empty);
 
         if (order.StudentId != userId)
             await AuthorizationService.CheckAsync(FitliyoPermissions.Admin.Dashboard);
@@ -163,7 +163,7 @@ public class OrderAppService : FitliyoAppService, IOrderAppService
     public async Task<OrderDto> CompleteAsync(Guid id)
     {
         var order = await _orderRepository.GetAsync(id);
-        var userId = CurrentUser.GetId();
+        var userId = (CurrentUser.Id ?? Guid.Empty);
 
         var trainerProfile = await _trainerProfileRepository.GetAsync(order.TrainerProfileId);
         if (trainerProfile.UserId != userId)
@@ -184,7 +184,7 @@ public class OrderAppService : FitliyoAppService, IOrderAppService
     public async Task<PagedResultDto<SessionDto>> GetSessionsAsync(Guid orderId)
     {
         var order = await _orderRepository.GetAsync(orderId);
-        var userId = CurrentUser.GetId();
+        var userId = (CurrentUser.Id ?? Guid.Empty);
 
         if (order.StudentId != userId)
         {

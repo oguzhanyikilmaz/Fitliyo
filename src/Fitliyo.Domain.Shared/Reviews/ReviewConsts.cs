@@ -8,4 +8,5 @@ public static class ReviewConsts
     public const int MaxReplyLength = 1000;
     public const int MinOrderCompletionHoursForReview = 0;
     public const int MaxReviewDaysAfterCompletion = 30;
+    public const int MaxAdminNoteLength = 500;
 }

@@ -86,6 +86,11 @@ public class Order : FullAuditedAggregateRoot<Guid>
     [StringLength(OrderConsts.MaxPaymentTransactionIdLength)]
     public string? PaymentTransactionId { get; set; }
 
+    /// <summary>
+    /// İlişkili ödeme kaydı (Payment entity)
+    /// </summary>
+    public Guid? PaymentId { get; set; }
+
     public DateTime? PaidAt { get; set; }
 
     public DateTime? CompletedAt { get; set; }

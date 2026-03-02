@@ -62,6 +62,17 @@ public class Session : FullAuditedEntity<Guid>
     /// </summary>
     public int SequenceNumber { get; set; }
 
+    /// <summary>
+    /// Yüz yüze ders konumu (adres veya mekân)
+    /// </summary>
+    [StringLength(OrderConsts.MaxLocationLength)]
+    public string? Location { get; set; }
+
+    /// <summary>
+    /// Ertelenen seans referansı (bu seans başka bir seansın ertelenmiş hali ise)
+    /// </summary>
+    public Guid? RescheduledFromSessionId { get; set; }
+
     protected Session()
     {
     }

@@ -111,7 +111,7 @@ public class TrainerProfileAppService : FitliyoAppService, ITrainerProfileAppSer
     [Authorize(FitliyoPermissions.Trainers.Create)]
     public async Task<TrainerProfileDto> CreateAsync(CreateUpdateTrainerProfileDto input)
     {
-        var userId = CurrentUser.GetId();
+        var userId = (CurrentUser.Id ?? Guid.Empty);
 
         var existingProfile = await _trainerProfileRepository.FindAsync(x => x.UserId == userId);
         if (existingProfile != null)
@@ -171,7 +171,7 @@ public class TrainerProfileAppService : FitliyoAppService, ITrainerProfileAppSer
     [Authorize]
     public async Task<TrainerProfileDto> GetMyProfileAsync()
     {
-        var userId = CurrentUser.GetId();
+        var userId = (CurrentUser.Id ?? Guid.Empty);
         var entity = await _trainerProfileRepository.FindAsync(x => x.UserId == userId);
         if (entity == null)
         {
@@ -182,7 +182,7 @@ public class TrainerProfileAppService : FitliyoAppService, ITrainerProfileAppSer
 
     private async Task CheckOwnershipAsync(TrainerProfile entity)
     {
-        if (entity.UserId != CurrentUser.GetId())
+        if (entity.UserId != (CurrentUser.Id ?? Guid.Empty))
         {
             var isAdmin = await AuthorizationService.IsGrantedAsync(FitliyoPermissions.Trainers.Verify);
             if (!isAdmin)

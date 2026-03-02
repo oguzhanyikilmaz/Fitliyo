@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -11,6 +12,7 @@ using Fitliyo.Localization;
 using Fitliyo.MultiTenancy;
 using Fitliyo.Web.Menus;
 using Microsoft.OpenApi.Models;
+using OpenIddict.Server.AspNetCore;
 using OpenIddict.Validation.AspNetCore;
 using Volo.Abp;
 using Volo.Abp.Account.Web;
@@ -85,6 +87,20 @@ public class FitliyoWebModule : AbpModule
             });
         });
 
+        // HTTP ile /connect/token kullanımı: Development VEYA SelfUrl http:// ile başlıyorsa HTTPS zorunluluğu kapatılır.
+        var selfUrl = configuration["App:SelfUrl"] ?? "";
+        var allowHttpToken = hostingEnvironment.IsDevelopment()
+            || selfUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase);
+
+        if (allowHttpToken)
+        {
+            PreConfigure<OpenIddictServerBuilder>(serverBuilder =>
+            {
+                serverBuilder.UseAspNetCore()
+                    .DisableTransportSecurityRequirement();
+            });
+        }
+
         if (!hostingEnvironment.IsDevelopment())
         {
             PreConfigure<AbpOpenIddictAspNetCoreOptions>(options =>
@@ -104,6 +120,7 @@ public class FitliyoWebModule : AbpModule
         var hostingEnvironment = context.Services.GetHostingEnvironment();
         var configuration = context.Services.GetConfiguration();
 
+        ConfigureCors(context);
         ConfigureAuthentication(context);
         ConfigureUrls(configuration);
         ConfigureBundles();
@@ -115,6 +132,23 @@ public class FitliyoWebModule : AbpModule
         Configure<AbpAutoMapperOptions>(options =>
         {
             options.AddMaps<FitliyoWebModule>();
+        });
+    }
+
+    private void ConfigureCors(ServiceConfigurationContext context)
+    {
+        context.Services.AddCors(options =>
+        {
+            options.AddDefaultPolicy(policy =>
+            {
+                var corsOrigins = context.Services.GetConfiguration()
+                    .GetSection("App:CorsOrigins")
+                    .Get<string>() ?? "http://localhost:3000,http://localhost:5000";
+                policy.WithOrigins(corsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials();
+            });
         });
     }
 
@@ -196,6 +230,9 @@ public class FitliyoWebModule : AbpModule
     {
         var app = context.GetApplicationBuilder();
         var env = context.GetEnvironment();
+
+        // CORS en başta: /connect/token gibi OpenIddict endpoint'lerinde yanıt da CORS header alsın
+        app.UseCors();
 
         if (env.IsDevelopment())
         {
