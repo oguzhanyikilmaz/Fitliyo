@@ -87,26 +87,18 @@ public class FitliyoWebModule : AbpModule
             });
         });
 
-        // HTTP ile /connect/token: Development'ta HTTPS zorunluluğu her zaman kapatılır (403 önlemek için).
-        if (hostingEnvironment.IsDevelopment())
+        // HTTP ile /connect/token: HTTPS zorunluluğu kapatılır (403 önlemek için).
+        // Development veya App:SelfUrl http ise token endpoint HTTP kabul eder (frontend login için gerekli).
+        var selfUrl = (configuration["App:SelfUrl"] ?? "").Trim();
+        var allowHttp = hostingEnvironment.IsDevelopment()
+            || selfUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase);
+        if (allowHttp)
         {
             PreConfigure<OpenIddictServerBuilder>(serverBuilder =>
             {
                 serverBuilder.UseAspNetCore()
                     .DisableTransportSecurityRequirement();
             });
-        }
-        else
-        {
-            var selfUrl = configuration["App:SelfUrl"] ?? "";
-            if (selfUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
-            {
-                PreConfigure<OpenIddictServerBuilder>(serverBuilder =>
-                {
-                    serverBuilder.UseAspNetCore()
-                        .DisableTransportSecurityRequirement();
-                });
-            }
         }
 
         if (!hostingEnvironment.IsDevelopment())
@@ -268,6 +260,18 @@ public class FitliyoWebModule : AbpModule
         app.UseCorrelationId();
         app.MapAbpStaticAssets();
         app.UseRouting();
+
+        // Development: /connect/token 403 önleme — OpenIddict HTTPS zorunluluğu Scheme kontrolüyle atlatılır (PreConfigure yeterli olmazsa)
+        if (env.IsDevelopment())
+        {
+            app.Use(async (ctx, next) =>
+            {
+                if (ctx.Request.Path.StartsWithSegments("/connect", StringComparison.OrdinalIgnoreCase))
+                    ctx.Request.Scheme = "https";
+                await next();
+            });
+        }
+
         app.UseAuthentication();
 
         // /connect/* (login token vb.) — OpenIddict Validation atlanır; token isteği bearer taşımaz, Validation 403 verebilir

@@ -3,6 +3,9 @@
 <Import Project="..\..\common.props" />
 
   <PropertyGroup>
+    <!-- Çıktı yolunun tekrarlanıp çok uzamasını önler (path too long hatası) -->
+    <BaseOutputPath>$(MSBuildThisFileDirectory)bin\</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)obj\</BaseIntermediateOutputPath>
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <RootNamespace>Fitliyo.Web</RootNamespace>

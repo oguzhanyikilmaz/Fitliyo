@@ -14,6 +14,21 @@ Bu doküman, tarayıcı olmadan (AJAX, Postman) kimlik doğrulama yöntemlerini 
     -   scope: `Fitliyo openid profile`
 -   Multi‑tenancy: Tenant bağlamı token/cookie ile taşınır (`ICurrentTenant`). Consultant kullanıcılar için sub‑tenant (şube) bağlamı eklenir (`SubTenantResolverMiddleware`).
 
+### /connect/token neden Swagger'da görünmüyor? 403 nasıl giderilir?
+
+-   **Swagger:** `/connect/token` OAuth2 token endpoint'idir; Swagger sadece REST/AppService endpoint'lerini listeler. Bu yüzden **Swagger'da görünmemesi normaldir**. Token almak için doğrudan `POST /connect/token` kullanın (Postman, curl veya frontend).
+-   **403 Forbidden yaygın nedenleri:**
+    1. **HTTPS zorunluluğu:** Sunucu HTTP (örn. `http://localhost:5000`) ile çalışıyorsa OpenIddict varsayılan olarak token endpoint'inde HTTPS ister. Projede bu, Development veya `App:SelfUrl` http ile başlıyorsa otomatik kapatılıyor (`FitliyoWebModule.PreConfigure`). **Backend'i tam kapatıp yeniden başlattıktan sonra** tekrar deneyin.
+    2. **Yanlış client_id:** İstekte `client_id=Fitliyo_App` olmalı (appsettings'taki OpenIddict uygulama adıyla eşleşir).
+    3. **Content-Type:** İstek gövdesi `application/x-www-form-urlencoded` olmalı; parametreler form alanı olarak gönderilmeli (örn. `grant_type=password&username=...&password=...&client_id=Fitliyo_App&scope=Fitliyo%20openid%20profile`).
+-   **Hızlı test (localhost):** Backend çalışırken:
+    ```bash
+    curl -X POST "http://localhost:5000/connect/token" \
+      -H "Content-Type: application/x-www-form-urlencoded" \
+      -d "grant_type=password&username=admin&password=Admin@2025&client_id=Fitliyo_App&scope=Fitliyo%20openid%20profile"
+    ```
+    Hâlâ 403 alırsanız backend konsolunda hata/uyarı loglarına bakın; `App:SelfUrl` değerinin `http://localhost:5000` olduğundan emin olun (`appsettings.Development.json`).
+
 ## Kimlik Doğrulama Akışları
 
 ### ÖNEMLİ: Yeni Multi-Tenant Authentication Flow
