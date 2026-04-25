@@ -1,5 +1,27 @@
 # Fitliyo Changelog
 
+## 2026-04-25 - Local backend port çakışması (5000) düzeltildi
+
+- **Kök neden:** `localhost:5000` portunu macOS `ControlCenter` (AirPlay Receiver) tuttuğu için istekler Fitliyo backend yerine farklı servise gidiyordu; bu nedenle `/api/app/...` çağrıları 404/erişim hatası veriyordu ve breakpoint'ler düşmüyordu.
+- **Çözüm:** Web host local portu `5001` olarak güncellendi (`launchSettings`, VS Code `ASPNETCORE_URLS`, `App:SelfUrl`), CORS origin `http://localhost:5001` olacak şekilde düzenlendi.
+- **Frontend uyumu:** Login/Register ve ortak API base varsayılanları `http://localhost:5001` olarak güncellendi.
+- **Sonuç:** Frontend çağrıları artık gerçek backend instance'ına yönleniyor.
+- **Ek düzeltme (Admin panel):** ABP Web admin panel JS çağrıları PascalCase route'lar (`/api/app/TrainerProfile/GetListAsync`) yerine swagger ile uyumlu kebab-case REST route'lara geçirildi (`/api/app/trainer-profile`, `/api/app/order/{id}/cancel`, vb.). Bu sayede modül menülerindeki 404 hataları giderildi.
+
+---
+
+## 2026-04-25 - Admin modülleri ABP Web'e taşındı (Razor Pages)
+
+- **Karar:** Admin backoffice işlemleri Next.js yerine ABP Web tarafında yönetilecek şekilde taşındı; frontend/mobil tarafı Student/Trainer deneyimine odaklanacak.
+- **Yeni ABP sayfası:** `~/Admin/Marketplace` eklendi. Tek panelde Support, Dispute, WithdrawalRequest, FeaturedListing ve BlogPost modülleri için yönetim işlemleri açıldı.
+- **İşlevler:** Listeleme, detay görüntüleme, oluşturma/güncelleme/silme ve varsa fonksiyonel aksiyonlar (yanıtlama, durum güncelleme, onay/red, publish, mark-processed, resolve) ABP Web arayüzünden çalışır hale getirildi.
+- **Menü:** Ana menüde Marketplace Yönetimi hiyerarşik hale getirildi: Kullanıcılar (Identity), Siparişler, Eğitmen Profilleri, Paketler, Kategoriler, Abonelik Planları, Yorumlar, Bildirimler, Destek, Uyuşmazlık, Para Çekme, Öne Çıkanlar, Blog.
+- **Yeni kapsanan modüller:** ABP admin panelinde Order/Trainer/ServicePackage/Category/Subscription/Review/Notification sekmeleri ve işlemleri eklendi.
+- **Backend genişletme:** Admin panel ihtiyacı için `OrderAppService.GetListAsync` (admin tüm sipariş listesi) ve `NotificationAppService.GetListAsync` (admin bildirim listesi, userId filtresi) endpointleri eklendi.
+- **Not:** Admin operasyonları ABP Web'e taşınırken frontend/mobil tarafı kullanıcı deneyimine odaklı tutuldu.
+
+---
+
 ## 2026-03-04 - API endpoint path tek kaynak (Swagger uyumlu kebab-case)
 
 - **Sorun:** Swagger’da endpoint’ler kebab-case görünüyordu (/api/app/user-profile/my-profile); frontend istekleri PascalCase kullanıyordu (/api/app/UserProfile/GetMyProfile). Path’ler dağınıktı ve tutarsızlık riski vardı.

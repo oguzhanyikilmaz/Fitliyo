@@ -1,13 +1,13 @@
 /**
  * Backend API base URL.
- * Geliştirme: http://localhost:5000
+ * Geliştirme: http://localhost:5001
  * Production: ortam değişkeni NEXT_PUBLIC_API_URL
  */
 const getBaseUrl = () => {
   if (typeof window !== "undefined") {
-    return process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+    return process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
   }
-  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
 };
 
 export const API_BASE = getBaseUrl();

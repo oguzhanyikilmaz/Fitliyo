@@ -45,6 +45,16 @@ export const ApiPaths = {
     updateAsync: (id: string) => apiPath("ServicePackage", "UpdateAsync", `id=${id}`),
     deleteAsync: (id: string) => apiPath("ServicePackage", "DeleteAsync", `id=${id}`),
   },
+  // Category
+  Category: {
+    getAsync: (id: string) => apiPath("Category", "GetAsync", `id=${id}`),
+    getListAsync: () => apiPath("Category", "GetListAsync"),
+    getListByParentAsync: (parentId?: string) =>
+      apiPath("Category", "GetListByParentAsync", `parentId=${parentId ?? ""}`),
+    createAsync: () => apiPath("Category", "CreateAsync"),
+    updateAsync: (id: string) => apiPath("Category", "UpdateAsync", `id=${id}`),
+    deleteAsync: (id: string) => apiPath("Category", "DeleteAsync", `id=${id}`),
+  },
   // Notification
   Notification: {
     getMyNotificationsAsync: (query?: string) => apiPath("Notification", "GetMyNotificationsAsync") + (query ?? ""),
@@ -53,10 +63,13 @@ export const ApiPaths = {
   },
   // SupportTicket
   SupportTicket: {
+    getAsync: (id: string) => apiPath("SupportTicket", "GetAsync", `id=${id}`),
     getMyTicketsAsync: (query?: string) => apiPath("SupportTicket", "GetMyTicketsAsync") + (query ?? ""),
     getListAsync: (query?: string) => apiPath("SupportTicket", "GetListAsync") + (query ?? ""),
     createAsync: () => apiPath("SupportTicket", "CreateAsync"),
     replyAsync: (id: string) => apiPath("SupportTicket", "ReplyAsync", `id=${id}`),
+    updateStatusAsync: (id: string, status: number) =>
+      apiPath("SupportTicket", "UpdateStatusAsync", `id=${id}&status=${status}`),
   },
   // Messaging
   Messaging: {
@@ -87,13 +100,35 @@ export const ApiPaths = {
   Admin: {
     getDashboardAsync: () => apiPath("Admin", "GetDashboardAsync"),
   },
+  // Subscription
+  Subscription: {
+    getPlansAsync: () => apiPath("Subscription", "GetPlansAsync"),
+    createPlanAsync: () => apiPath("Subscription", "CreatePlanAsync"),
+    updatePlanAsync: (id: string) => apiPath("Subscription", "UpdatePlanAsync", `id=${id}`),
+    deletePlanAsync: (id: string) => apiPath("Subscription", "DeletePlanAsync", `id=${id}`),
+  },
   // Dispute
   Dispute: {
+    getAsync: (id: string) => apiPath("Dispute", "GetAsync", `id=${id}`),
     getListAsync: (query?: string) => apiPath("Dispute", "GetListAsync") + (query ?? ""),
     resolveAsync: (id: string) => apiPath("Dispute", "ResolveAsync", `id=${id}`),
   },
   // FeaturedListing
   FeaturedListing: {
+    getAsync: (id: string) => apiPath("FeaturedListing", "GetAsync", `id=${id}`),
     getListAsync: (query?: string) => apiPath("FeaturedListing", "GetListAsync") + (query ?? ""),
+    createAsync: () => apiPath("FeaturedListing", "CreateAsync"),
+    updateAsync: (id: string) => apiPath("FeaturedListing", "UpdateAsync", `id=${id}`),
+    deleteAsync: (id: string) => apiPath("FeaturedListing", "DeleteAsync", `id=${id}`),
+  },
+  // BlogPost
+  BlogPost: {
+    getAsync: (id: string) => apiPath("BlogPost", "GetAsync", `id=${id}`),
+    getListAsync: (query?: string) => apiPath("BlogPost", "GetListAsync") + (query ?? ""),
+    getPublishedListAsync: (query?: string) => apiPath("BlogPost", "GetPublishedListAsync") + (query ?? ""),
+    createAsync: () => apiPath("BlogPost", "CreateAsync"),
+    updateAsync: (id: string) => apiPath("BlogPost", "UpdateAsync", `id=${id}`),
+    deleteAsync: (id: string) => apiPath("BlogPost", "DeleteAsync", `id=${id}`),
+    publishAsync: (id: string) => apiPath("BlogPost", "PublishAsync", `id=${id}`),
   },
 } as const;

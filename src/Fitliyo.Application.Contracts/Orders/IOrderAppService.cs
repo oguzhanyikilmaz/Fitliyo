@@ -14,6 +14,8 @@ public interface IOrderAppService : IApplicationService
 
     Task<PagedResultDto<OrderDto>> GetTrainerOrdersAsync(GetOrderListDto input);
 
+    Task<PagedResultDto<OrderDto>> GetListAsync(GetOrderListDto input);
+
     Task<OrderDto> CreateAsync(CreateOrderDto input);
 
     Task<OrderDto> CancelAsync(Guid id, string? reason);

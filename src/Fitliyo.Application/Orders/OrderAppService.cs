@@ -110,6 +110,29 @@ public class OrderAppService : FitliyoAppService, IOrderAppService
         return new PagedResultDto<OrderDto>(totalCount, entities.Select(x => ObjectMapper.Map<Order, OrderDto>(x)).ToList());
     }
 
+    [Authorize(FitliyoPermissions.Admin.Dashboard)]
+    public async Task<PagedResultDto<OrderDto>> GetListAsync(GetOrderListDto input)
+    {
+        var queryable = await _orderRepository.GetQueryableAsync();
+
+        if (input.Status.HasValue)
+            queryable = queryable.Where(x => x.Status == input.Status.Value);
+
+        if (input.PaymentStatus.HasValue)
+            queryable = queryable.Where(x => x.PaymentStatus == input.PaymentStatus.Value);
+
+        var totalCount = await AsyncExecuter.CountAsync(queryable);
+
+        queryable = !string.IsNullOrWhiteSpace(input.Sorting)
+            ? queryable.OrderBy(input.Sorting)
+            : queryable.OrderByDescending(x => x.CreationTime);
+
+        queryable = queryable.PageBy(input);
+        var entities = await AsyncExecuter.ToListAsync(queryable);
+
+        return new PagedResultDto<OrderDto>(totalCount, entities.Select(x => ObjectMapper.Map<Order, OrderDto>(x)).ToList());
+    }
+
     [Authorize]
     public async Task<OrderDto> CreateAsync(CreateOrderDto input)
     {

@@ -3,12 +3,7 @@
 import { useEffect, useState } from "react";
 import { apiFetch, buildQuery, DEFAULT_LIST_PARAMS } from "@/lib/api";
 import { ApiPaths } from "@/lib/api-paths";
-import type {
-  PagedResultDto,
-  SupportTicketDto,
-  GetSupportTicketListDto,
-  ReplySupportTicketDto,
-} from "@/lib/types";
+import type { PagedResultDto, SupportTicketDto, GetSupportTicketListDto, ReplySupportTicketDto } from "@/lib/types";
 
 const CATEGORY_LABELS: Record<number, string> = {
   0: "Genel",
@@ -48,6 +43,7 @@ export default function AdminSupportPage() {
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [replyError, setReplyError] = useState<string | null>(null);
+  const [statusChangingId, setStatusChangingId] = useState<string | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -82,6 +78,18 @@ export default function AdminSupportPage() {
         setReplyError(e instanceof Error ? e.message : "Yanıt gönderilemedi");
         setReplyingId(null);
       });
+  };
+
+  const handleStatusChange = (id: string, status: number) => {
+    setReplyError(null);
+    setStatusChangingId(id);
+    apiFetch<SupportTicketDto>(ApiPaths.SupportTicket.updateStatusAsync(id, status), {
+      method: "POST",
+      body: JSON.stringify({}),
+    })
+      .then(() => load())
+      .catch((e) => setReplyError(e instanceof Error ? e.message : "Durum güncellenemedi"))
+      .finally(() => setStatusChangingId(null));
   };
 
   if (loading && !data) {
@@ -131,6 +139,9 @@ export default function AdminSupportPage() {
                 {CATEGORY_LABELS[t.category] ?? t.category} · {formatDate(t.creationTime)}
               </p>
               <p className="mt-2 text-sm text-slate-600">{t.message}</p>
+              <p className="mt-1 text-xs text-slate-500">
+                Kullanıcı: {t.userId ?? "—"} · Sipariş: {t.orderId ?? "—"} · Öncelik: {t.priority}
+              </p>
               {t.adminReply && (
                 <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 p-3 text-sm text-slate-700">
                   <span className="font-medium">Yanıt: </span>
@@ -142,6 +153,40 @@ export default function AdminSupportPage() {
               )}
               {(t.status === 0 || t.status === 1 || t.status === 2) && (
                 <div className="mt-4 border-t border-slate-100 pt-4">
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleStatusChange(t.id, 1)}
+                      disabled={statusChangingId === t.id}
+                      className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                    >
+                      İnceleniyor
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleStatusChange(t.id, 2)}
+                      disabled={statusChangingId === t.id}
+                      className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                    >
+                      Müşteri Bekleniyor
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleStatusChange(t.id, 3)}
+                      disabled={statusChangingId === t.id}
+                      className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                    >
+                      Çözüldü
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleStatusChange(t.id, 4)}
+                      disabled={statusChangingId === t.id}
+                      className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                    >
+                      Kapatıldı
+                    </button>
+                  </div>
                   {selectedTicketId !== t.id ? (
                     <button
                       type="button"

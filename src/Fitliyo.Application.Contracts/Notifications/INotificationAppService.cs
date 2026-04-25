@@ -8,6 +8,8 @@ namespace Fitliyo.Notifications;
 
 public interface INotificationAppService : IApplicationService
 {
+    Task<PagedResultDto<NotificationDto>> GetListAsync(GetNotificationListDto input);
+
     Task<PagedResultDto<NotificationDto>> GetMyNotificationsAsync(GetNotificationListDto input);
 
     Task<int> GetUnreadCountAsync();

@@ -5,6 +5,7 @@ import { apiFetch, buildQuery } from "@/lib/api";
 import { ApiPaths } from "@/lib/api-paths";
 import type {
   PagedResultDto,
+  ProcessWithdrawalDto,
   WithdrawalRequestDto,
   GetWithdrawalRequestListDto,
 } from "@/lib/types";
@@ -36,6 +37,8 @@ export default function AdminWithdrawalsPage() {
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [noteForId, setNoteForId] = useState<string | null>(null);
+  const [adminNote, setAdminNote] = useState("");
 
   const load = () => {
     setLoading(true);
@@ -60,11 +63,16 @@ export default function AdminWithdrawalsPage() {
   const handleApprove = (id: string) => {
     setActionError(null);
     setProcessingId(id);
+    const body: ProcessWithdrawalDto = { adminNote: adminNote.trim() || null };
     apiFetch<WithdrawalRequestDto>(ApiPaths.WithdrawalRequest.approveAsync(id), {
       method: "POST",
-      body: JSON.stringify({}),
+      body: JSON.stringify(body),
     })
-      .then(() => load())
+      .then(() => {
+        setNoteForId(null);
+        setAdminNote("");
+        load();
+      })
       .catch((e) => setActionError(e instanceof Error ? e.message : "Onaylanamadı"))
       .finally(() => setProcessingId(null));
   };
@@ -72,11 +80,16 @@ export default function AdminWithdrawalsPage() {
   const handleReject = (id: string) => {
     setActionError(null);
     setProcessingId(id);
+    const body: ProcessWithdrawalDto = { adminNote: adminNote.trim() || null };
     apiFetch<WithdrawalRequestDto>(ApiPaths.WithdrawalRequest.rejectAsync(id), {
       method: "POST",
-      body: JSON.stringify({}),
+      body: JSON.stringify(body),
     })
-      .then(() => load())
+      .then(() => {
+        setNoteForId(null);
+        setAdminNote("");
+        load();
+      })
       .catch((e) => setActionError(e instanceof Error ? e.message : "Reddedilemedi"))
       .finally(() => setProcessingId(null));
   };
@@ -151,22 +164,56 @@ export default function AdminWithdrawalsPage() {
                   </span>
                   {r.status === 0 && (
                     <>
-                      <button
-                        type="button"
-                        onClick={() => handleApprove(r.id)}
-                        disabled={processingId === r.id}
-                        className="rounded-lg bg-fitliyo-green px-3 py-1.5 text-sm font-medium text-white hover:bg-fitliyo-green/90 disabled:opacity-50"
-                      >
-                        {processingId === r.id ? "..." : "Onayla"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleReject(r.id)}
-                        disabled={processingId === r.id}
-                        className="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
-                      >
-                        Reddet
-                      </button>
+                      {noteForId === r.id ? (
+                        <div className="flex w-full flex-col gap-2">
+                          <input
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            placeholder="Admin notu (opsiyonel)"
+                            value={adminNote}
+                            onChange={(e) => setAdminNote(e.target.value)}
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleApprove(r.id)}
+                              disabled={processingId === r.id}
+                              className="rounded-lg bg-fitliyo-green px-3 py-1.5 text-sm font-medium text-white hover:bg-fitliyo-green/90 disabled:opacity-50"
+                            >
+                              {processingId === r.id ? "..." : "Onayla"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleReject(r.id)}
+                              disabled={processingId === r.id}
+                              className="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                            >
+                              Reddet
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setNoteForId(null);
+                                setAdminNote("");
+                              }}
+                              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                            >
+                              İptal
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNoteForId(r.id);
+                            setAdminNote(r.adminNote ?? "");
+                          }}
+                          disabled={processingId === r.id}
+                          className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                        >
+                          İşlem Yap
+                        </button>
+                      )}
                     </>
                   )}
                   {r.status === 1 && (

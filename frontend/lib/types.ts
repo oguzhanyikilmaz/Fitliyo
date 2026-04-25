@@ -66,6 +66,13 @@ export interface CategoryDto {
   parentId?: string;
   displayOrder?: number;
 }
+export interface CreateUpdateCategoryDto {
+  name: string;
+  slug?: string | null;
+  parentId?: string | null;
+  iconUrl?: string | null;
+  displayOrder: number;
+}
 
 /** Öne çıkan liste (FeaturedListing) */
 export type FeaturedListingPageType = number; // 0=Homepage, 1=Category, 2=Search
@@ -83,6 +90,16 @@ export interface FeaturedListingDto {
 export interface GetFeaturedListingListDto extends PagedAndSortedRequest {
   pageType?: FeaturedListingPageType;
   isActive?: boolean;
+}
+export interface CreateUpdateFeaturedListingDto {
+  pageType: FeaturedListingPageType;
+  trainerProfileId?: string | null;
+  servicePackageId?: string | null;
+  sortOrder: number;
+  startDate?: string | null;
+  endDate?: string | null;
+  isActive: boolean;
+  adminNote?: string | null;
 }
 
 /** Sipariş */
@@ -409,6 +426,9 @@ export interface CreateSupportTicketDto {
 export interface ReplySupportTicketDto {
   adminReply: string;
 }
+export interface UpdateSupportTicketStatusDto {
+  status: SupportTicketStatus;
+}
 
 /** Cüzdan */
 export interface TrainerWalletDto {
@@ -454,6 +474,9 @@ export interface CreateWithdrawalRequestDto {
   iban: string;
   accountHolderName: string;
 }
+export interface ProcessWithdrawalDto {
+  adminNote?: string | null;
+}
 
 /** Admin dashboard */
 export interface DashboardDto {
@@ -493,4 +516,56 @@ export interface GetDisputeListDto extends PagedAndSortedRequest {
 }
 export interface ResolveDisputeDto {
   resolutionNote: string;
+}
+
+/** Blog */
+export type BlogPostStatus = number; // 0=Draft, 1=Published, 2=Archived
+export interface BlogPostDto {
+  id: string;
+  title: string;
+  slug: string;
+  summary?: string | null;
+  body: string;
+  status: BlogPostStatus;
+  publishedAt?: string | null;
+  authorName?: string | null;
+  authorUserId?: string | null;
+  featuredImageUrl?: string | null;
+  creationTime: string;
+}
+export interface GetBlogPostListDto extends PagedAndSortedRequest {
+  filter?: string;
+  status?: BlogPostStatus;
+}
+export interface CreateUpdateBlogPostDto {
+  title: string;
+  slug: string;
+  summary?: string | null;
+  body: string;
+  featuredImageUrl?: string | null;
+}
+
+/** Subscription */
+export interface SubscriptionPlanDto {
+  id: string;
+  name: string;
+  tier: number;
+  price: number;
+  currency: string;
+  commissionRate: number;
+  maxPackagesPerMonth: number;
+  featuresJson?: string | null;
+  isActive: boolean;
+  sortOrder: number;
+}
+export interface CreateUpdateSubscriptionPlanDto {
+  name: string;
+  tier: number;
+  price: number;
+  currency: string;
+  commissionRate: number;
+  maxPackagesPerMonth: number;
+  featuresJson?: string | null;
+  isActive: boolean;
+  sortOrder: number;
 }

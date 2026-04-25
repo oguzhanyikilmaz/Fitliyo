@@ -11,12 +11,12 @@
       "console": "integratedTerminal",
       "env": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "ASPNETCORE_URLS": "http://localhost:5000"
+        "ASPNETCORE_URLS": "http://localhost:5001"
       },
       "serverReadyAction": {
         "action": "openExternally",
         "pattern": "Now listening on",
-        "uriFormat": "http://localhost:5000/swagger"
+        "uriFormat": "http://localhost:5001/swagger"
       }
     },
     {

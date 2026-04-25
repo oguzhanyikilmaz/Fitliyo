@@ -1,0 +1,60 @@
+@page "/Admin/Marketplace/{module?}"
+@model Fitliyo.Web.Pages.Admin.MarketplaceModel
+
+<abp-card>
+    <abp-card-header>
+        <abp-row>
+            <abp-column size-md="_6">
+                <abp-card-title>@Model.PageTitle</abp-card-title>
+            </abp-column>
+            <abp-column size-md="_6" class="text-end">
+                <abp-button id="MarketplaceCreateButton"
+                            text="+ Yeni kayıt"
+                            button-type="Primary"
+                            class="d-none" />
+            </abp-column>
+        </abp-row>
+    </abp-card-header>
+    <abp-card-body>
+        <input type="hidden" id="currentMarketplaceModule" value="@Model.CurrentModule" />
+
+        <div id="marketplaceOverview" class="row g-3">
+            <div class="col-md-4"><a class="btn btn-outline-primary w-100" href="~/Admin/Marketplace/orders">Siparişler</a></div>
+            <div class="col-md-4"><a class="btn btn-outline-primary w-100" href="~/Admin/Marketplace/trainers">Eğitmenler</a></div>
+            <div class="col-md-4"><a class="btn btn-outline-primary w-100" href="~/Admin/Marketplace/packages">Paketler</a></div>
+            <div class="col-md-4"><a class="btn btn-outline-primary w-100" href="~/Admin/Marketplace/categories">Kategoriler</a></div>
+            <div class="col-md-4"><a class="btn btn-outline-primary w-100" href="~/Admin/Marketplace/subscriptions">Abonelikler</a></div>
+            <div class="col-md-4"><a class="btn btn-outline-primary w-100" href="~/Admin/Marketplace/reviews">Yorumlar</a></div>
+            <div class="col-md-4"><a class="btn btn-outline-primary w-100" href="~/Admin/Marketplace/notifications">Bildirimler</a></div>
+            <div class="col-md-4"><a class="btn btn-outline-primary w-100" href="~/Admin/Marketplace/support">Destek</a></div>
+            <div class="col-md-4"><a class="btn btn-outline-primary w-100" href="~/Admin/Marketplace/disputes">Uyuşmazlık</a></div>
+            <div class="col-md-4"><a class="btn btn-outline-primary w-100" href="~/Admin/Marketplace/withdrawals">Para Çekme</a></div>
+            <div class="col-md-4"><a class="btn btn-outline-primary w-100" href="~/Admin/Marketplace/featured">Öne Çıkanlar</a></div>
+            <div class="col-md-4"><a class="btn btn-outline-primary w-100" href="~/Admin/Marketplace/blog">Blog</a></div>
+        </div>
+
+        <div id="marketplaceTableWrapper" class="d-none">
+            <abp-table striped-rows="true" id="MarketplaceTable"></abp-table>
+        </div>
+    </abp-card-body>
+</abp-card>
+
+<div class="modal fade" id="marketplaceXlModal" tabindex="-1" aria-labelledby="marketplaceXlModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="marketplaceXlModalLabel">Detay</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body" id="marketplaceXlModalBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Kapat</button>
+                <button type="button" class="btn btn-primary d-none" id="marketplaceXlModalSaveBtn">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <abp-script src="/Pages/Admin/Marketplace.js" />
+}

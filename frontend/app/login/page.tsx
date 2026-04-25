@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { setAuth, getDashboardPathForRole, getRolesFromToken } from "@/lib/auth";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
 const CLIENT_ID = process.env.NEXT_PUBLIC_OAUTH_CLIENT_ID || "Fitliyo_App";
 
 function normalizeRedirect(redirect: string | null): string | null {
