@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Fitliyo.Notifications.Dtos;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Identity;
 using Volo.Abp.Users;
 
 namespace Fitliyo.Notifications;
@@ -15,11 +17,14 @@ namespace Fitliyo.Notifications;
 public class NotificationAppService : FitliyoAppService, INotificationAppService
 {
     private readonly IRepository<Notification, Guid> _notificationRepository;
+    private readonly IRepository<IdentityUser, Guid> _identityUserRepository;
 
     public NotificationAppService(
-        IRepository<Notification, Guid> notificationRepository)
+        IRepository<Notification, Guid> notificationRepository,
+        IRepository<IdentityUser, Guid> identityUserRepository)
     {
         _notificationRepository = notificationRepository;
+        _identityUserRepository = identityUserRepository;
     }
 
     [Authorize]
@@ -44,8 +49,8 @@ public class NotificationAppService : FitliyoAppService, INotificationAppService
             queryable = queryable.OrderByDescending(x => x.CreationTime);
             queryable = queryable.PageBy(input);
             var entities = await AsyncExecuter.ToListAsync(queryable);
-
-            return new PagedResultDto<NotificationDto>(totalCount, entities.Select(x => ObjectMapper.Map<Notification, NotificationDto>(x)).ToList());
+            var dtos = await MapNotificationsToDtoAsync(entities);
+            return new PagedResultDto<NotificationDto>(totalCount, dtos);
         }
         catch (Exception ex) when (IsMissingNotificationsTableError(ex))
         {
@@ -76,8 +81,8 @@ public class NotificationAppService : FitliyoAppService, INotificationAppService
             queryable = queryable.PageBy(input);
 
             var entities = await AsyncExecuter.ToListAsync(queryable);
-
-            return new PagedResultDto<NotificationDto>(totalCount, entities.Select(x => ObjectMapper.Map<Notification, NotificationDto>(x)).ToList());
+            var dtos = await MapNotificationsToDtoAsync(entities);
+            return new PagedResultDto<NotificationDto>(totalCount, dtos);
         }
         catch (Exception ex) when (IsMissingNotificationsTableError(ex))
         {
@@ -150,5 +155,33 @@ public class NotificationAppService : FitliyoAppService, INotificationAppService
         var message = exception.ToString();
         return message.Contains("42P01", StringComparison.OrdinalIgnoreCase) &&
                message.Contains("AppNotifications", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task<List<NotificationDto>> MapNotificationsToDtoAsync(IReadOnlyList<Notification> notifications)
+    {
+        if (notifications.Count == 0)
+        {
+            return [];
+        }
+
+        var userIds = notifications.Select(x => x.UserId).Distinct().ToList();
+        var usersQuery = await _identityUserRepository.GetQueryableAsync();
+        var users = await AsyncExecuter.ToListAsync(usersQuery.Where(x => userIds.Contains(x.Id)));
+        var userNameMap = users.ToDictionary(x => x.Id, x => BuildFullName(x.Name, x.Surname));
+
+        var dtos = notifications.Select(x =>
+        {
+            var dto = ObjectMapper.Map<Notification, NotificationDto>(x);
+            dto.UserFullName = userNameMap.TryGetValue(x.UserId, out var fullName) ? fullName : null;
+            return dto;
+        }).ToList();
+
+        return dtos;
+    }
+
+    private static string? BuildFullName(string? name, string? surname)
+    {
+        var fullName = $"{name} {surname}".Trim();
+        return string.IsNullOrWhiteSpace(fullName) ? null : fullName;
     }
 }

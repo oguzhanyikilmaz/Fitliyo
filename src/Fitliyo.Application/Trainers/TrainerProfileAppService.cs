@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Dynamic.Core;
 using System.Threading.Tasks;
@@ -8,7 +9,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Identity;
 using Volo.Abp.Users;
 
 namespace Fitliyo.Trainers;
@@ -19,22 +22,26 @@ public class TrainerProfileAppService : FitliyoAppService, ITrainerProfileAppSer
     private readonly IRepository<TrainerProfile, Guid> _trainerProfileRepository;
     private readonly IRepository<TrainerCertificate, Guid> _certificateRepository;
     private readonly IRepository<TrainerGallery, Guid> _galleryRepository;
+    private readonly IRepository<IdentityUser, Guid> _identityUserRepository;
 
     public TrainerProfileAppService(
         IRepository<TrainerProfile, Guid> trainerProfileRepository,
         IRepository<TrainerCertificate, Guid> certificateRepository,
-        IRepository<TrainerGallery, Guid> galleryRepository)
+        IRepository<TrainerGallery, Guid> galleryRepository,
+        IRepository<IdentityUser, Guid> identityUserRepository)
     {
         _trainerProfileRepository = trainerProfileRepository;
         _certificateRepository = certificateRepository;
         _galleryRepository = galleryRepository;
+        _identityUserRepository = identityUserRepository;
     }
 
     [AllowAnonymous]
     public async Task<TrainerProfileDto> GetAsync(Guid id)
     {
         var entity = await _trainerProfileRepository.GetAsync(id);
-        return ObjectMapper.Map<TrainerProfile, TrainerProfileDto>(entity);
+        await EnrichTrainerDisplayNamesAsync([entity]);
+        return MapTrainerToDto(entity);
     }
 
     [AllowAnonymous]
@@ -45,7 +52,8 @@ public class TrainerProfileAppService : FitliyoAppService, ITrainerProfileAppSer
         {
             throw new BusinessException(FitliyoDomainErrorCodes.TrainerProfileNotFound);
         }
-        return ObjectMapper.Map<TrainerProfile, TrainerProfileDto>(entity);
+        await EnrichTrainerDisplayNamesAsync([entity]);
+        return MapTrainerToDto(entity);
     }
 
     [AllowAnonymous]
@@ -103,7 +111,8 @@ public class TrainerProfileAppService : FitliyoAppService, ITrainerProfileAppSer
         queryable = queryable.PageBy(input);
 
         var entities = await AsyncExecuter.ToListAsync(queryable);
-        var dtos = entities.Select(x => ObjectMapper.Map<TrainerProfile, TrainerProfileDto>(x)).ToList();
+        await EnrichTrainerDisplayNamesAsync(entities);
+        var dtos = entities.Select(MapTrainerToDto).ToList();
 
         return new PagedResultDto<TrainerProfileDto>(totalCount, dtos);
     }
@@ -127,11 +136,12 @@ public class TrainerProfileAppService : FitliyoAppService, ITrainerProfileAppSer
 
         var entity = new TrainerProfile(GuidGenerator.Create(), userId, input.Slug, input.TrainerType);
         ApplyDtoToEntity(input, entity);
+        await PopulateTrainerDisplayNameAsync(entity);
 
         await _trainerProfileRepository.InsertAsync(entity);
         Logger.LogInformation("Eğitmen profili oluşturuldu: {TrainerProfileId}, {UserId}", entity.Id, userId);
 
-        return ObjectMapper.Map<TrainerProfile, TrainerProfileDto>(entity);
+        return MapTrainerToDto(entity);
     }
 
     [Authorize(FitliyoPermissions.Trainers.Edit)]
@@ -151,11 +161,12 @@ public class TrainerProfileAppService : FitliyoAppService, ITrainerProfileAppSer
         }
 
         ApplyDtoToEntity(input, entity);
+        await PopulateTrainerDisplayNameAsync(entity);
 
         await _trainerProfileRepository.UpdateAsync(entity);
         Logger.LogInformation("Eğitmen profili güncellendi: {TrainerProfileId}", entity.Id);
 
-        return ObjectMapper.Map<TrainerProfile, TrainerProfileDto>(entity);
+        return MapTrainerToDto(entity);
     }
 
     [Authorize(FitliyoPermissions.Trainers.Delete)]
@@ -177,7 +188,8 @@ public class TrainerProfileAppService : FitliyoAppService, ITrainerProfileAppSer
         {
             throw new BusinessException(FitliyoDomainErrorCodes.TrainerProfileNotFound);
         }
-        return ObjectMapper.Map<TrainerProfile, TrainerProfileDto>(entity);
+        await EnrichTrainerDisplayNamesAsync([entity]);
+        return MapTrainerToDto(entity);
     }
 
     private async Task CheckOwnershipAsync(TrainerProfile entity)
@@ -205,5 +217,62 @@ public class TrainerProfileAppService : FitliyoAppService, ITrainerProfileAppSer
         entity.InstagramUrl = input.InstagramUrl;
         entity.YoutubeUrl = input.YoutubeUrl;
         entity.WebsiteUrl = input.WebsiteUrl;
+    }
+
+    private async Task PopulateTrainerDisplayNameAsync(TrainerProfile trainerProfile)
+    {
+        var user = await _identityUserRepository.FindAsync(trainerProfile.UserId);
+        var fullName = BuildFullName(user?.Name, user?.Surname);
+        if (!string.IsNullOrWhiteSpace(fullName))
+        {
+            trainerProfile.SetProperty("TrainerFullName", fullName);
+        }
+    }
+
+    private async Task EnrichTrainerDisplayNamesAsync(IReadOnlyList<TrainerProfile> profiles)
+    {
+        if (profiles.Count == 0)
+        {
+            return;
+        }
+
+        var userIds = profiles.Select(x => x.UserId).Distinct().ToList();
+        var usersQuery = await _identityUserRepository.GetQueryableAsync();
+        var users = await AsyncExecuter.ToListAsync(usersQuery.Where(x => userIds.Contains(x.Id)));
+        var userNameMap = users.ToDictionary(x => x.Id, x => BuildFullName(x.Name, x.Surname));
+
+        var dirtyProfiles = new List<TrainerProfile>();
+        foreach (var profile in profiles)
+        {
+            var existingName = profile.GetProperty<string>("TrainerFullName");
+            if (!string.IsNullOrWhiteSpace(existingName))
+            {
+                continue;
+            }
+
+            if (userNameMap.TryGetValue(profile.UserId, out var resolvedName) && !string.IsNullOrWhiteSpace(resolvedName))
+            {
+                profile.SetProperty("TrainerFullName", resolvedName);
+                dirtyProfiles.Add(profile);
+            }
+        }
+
+        if (dirtyProfiles.Count > 0)
+        {
+            await _trainerProfileRepository.UpdateManyAsync(dirtyProfiles);
+        }
+    }
+
+    private TrainerProfileDto MapTrainerToDto(TrainerProfile trainerProfile)
+    {
+        var dto = ObjectMapper.Map<TrainerProfile, TrainerProfileDto>(trainerProfile);
+        dto.TrainerFullName = trainerProfile.GetProperty<string>("TrainerFullName");
+        return dto;
+    }
+
+    private static string? BuildFullName(string? name, string? surname)
+    {
+        var fullName = $"{name} {surname}".Trim();
+        return string.IsNullOrWhiteSpace(fullName) ? null : fullName;
     }
 }

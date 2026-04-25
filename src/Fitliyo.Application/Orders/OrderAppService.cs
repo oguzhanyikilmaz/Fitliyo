@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Dynamic.Core;
 using System.Threading.Tasks;
@@ -11,7 +12,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Identity;
 using Volo.Abp.Users;
 
 namespace Fitliyo.Orders;
@@ -23,17 +26,20 @@ public class OrderAppService : FitliyoAppService, IOrderAppService
     private readonly IRepository<Session, Guid> _sessionRepository;
     private readonly IRepository<ServicePackage, Guid> _packageRepository;
     private readonly IRepository<TrainerProfile, Guid> _trainerProfileRepository;
+    private readonly IRepository<IdentityUser, Guid> _identityUserRepository;
 
     public OrderAppService(
         IRepository<Order, Guid> orderRepository,
         IRepository<Session, Guid> sessionRepository,
         IRepository<ServicePackage, Guid> packageRepository,
-        IRepository<TrainerProfile, Guid> trainerProfileRepository)
+        IRepository<TrainerProfile, Guid> trainerProfileRepository,
+        IRepository<IdentityUser, Guid> identityUserRepository)
     {
         _orderRepository = orderRepository;
         _sessionRepository = sessionRepository;
         _packageRepository = packageRepository;
         _trainerProfileRepository = trainerProfileRepository;
+        _identityUserRepository = identityUserRepository;
     }
 
     [Authorize]
@@ -51,7 +57,11 @@ public class OrderAppService : FitliyoAppService, IOrderAppService
             }
         }
 
+        await EnrichOrderDisplayNamesAsync([order]);
+
         var dto = ObjectMapper.Map<Order, OrderDto>(order);
+        dto.StudentFullName = order.GetProperty<string>("StudentFullName");
+        dto.TrainerFullName = order.GetProperty<string>("TrainerFullName");
         var package = await _packageRepository.GetAsync(order.ServicePackageId);
         dto.PackageSessionCount = package.SessionCount;
         dto.PackageDurationDays = package.DurationDays;
@@ -80,8 +90,9 @@ public class OrderAppService : FitliyoAppService, IOrderAppService
 
         queryable = queryable.PageBy(input);
         var entities = await AsyncExecuter.ToListAsync(queryable);
-
-        return new PagedResultDto<OrderDto>(totalCount, entities.Select(x => ObjectMapper.Map<Order, OrderDto>(x)).ToList());
+        await EnrichOrderDisplayNamesAsync(entities);
+        var dtos = entities.Select(MapOrderToDto).ToList();
+        return new PagedResultDto<OrderDto>(totalCount, dtos);
     }
 
     [Authorize]
@@ -106,8 +117,9 @@ public class OrderAppService : FitliyoAppService, IOrderAppService
 
         queryable = queryable.PageBy(input);
         var entities = await AsyncExecuter.ToListAsync(queryable);
-
-        return new PagedResultDto<OrderDto>(totalCount, entities.Select(x => ObjectMapper.Map<Order, OrderDto>(x)).ToList());
+        await EnrichOrderDisplayNamesAsync(entities);
+        var dtos = entities.Select(MapOrderToDto).ToList();
+        return new PagedResultDto<OrderDto>(totalCount, dtos);
     }
 
     [Authorize(FitliyoPermissions.Admin.Dashboard)]
@@ -129,8 +141,9 @@ public class OrderAppService : FitliyoAppService, IOrderAppService
 
         queryable = queryable.PageBy(input);
         var entities = await AsyncExecuter.ToListAsync(queryable);
-
-        return new PagedResultDto<OrderDto>(totalCount, entities.Select(x => ObjectMapper.Map<Order, OrderDto>(x)).ToList());
+        await EnrichOrderDisplayNamesAsync(entities);
+        var dtos = entities.Select(MapOrderToDto).ToList();
+        return new PagedResultDto<OrderDto>(totalCount, dtos);
     }
 
     [Authorize]
@@ -156,11 +169,12 @@ public class OrderAppService : FitliyoAppService, IOrderAppService
             input.Quantity);
 
         order.Notes = input.Notes;
+        await PopulateOrderDisplayNamesAsync(order, trainerProfile);
 
         await _orderRepository.InsertAsync(order);
         Logger.LogInformation("Sipariş oluşturuldu: {OrderId}, {OrderNumber}, Öğrenci: {StudentId}", order.Id, orderNumber, userId);
 
-        return ObjectMapper.Map<Order, OrderDto>(order);
+        return MapOrderToDto(order);
     }
 
     [Authorize]
@@ -183,7 +197,7 @@ public class OrderAppService : FitliyoAppService, IOrderAppService
         await _orderRepository.UpdateAsync(order);
         Logger.LogInformation("Sipariş iptal edildi: {OrderId}, Sebep: {Reason}", id, reason);
 
-        return ObjectMapper.Map<Order, OrderDto>(order);
+        return MapOrderToDto(order);
     }
 
     [Authorize]
@@ -204,7 +218,7 @@ public class OrderAppService : FitliyoAppService, IOrderAppService
 
         Logger.LogInformation("Sipariş tamamlandı: {OrderId}", id);
 
-        return ObjectMapper.Map<Order, OrderDto>(order);
+        return MapOrderToDto(order);
     }
 
     [Authorize]
@@ -270,5 +284,90 @@ public class OrderAppService : FitliyoAppService, IOrderAppService
     private static string GenerateOrderNumber()
     {
         return $"FIT-{DateTime.Now:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..6].ToUpperInvariant()}";
+    }
+
+    private async Task PopulateOrderDisplayNamesAsync(Order order, TrainerProfile trainerProfile)
+    {
+        var student = await _identityUserRepository.FindAsync(order.StudentId);
+        var trainerUser = await _identityUserRepository.FindAsync(trainerProfile.UserId);
+        var studentFullName = BuildFullName(student?.Name, student?.Surname);
+        var trainerFullName = BuildFullName(trainerUser?.Name, trainerUser?.Surname);
+
+        if (!string.IsNullOrWhiteSpace(studentFullName))
+        {
+            order.SetProperty("StudentFullName", studentFullName);
+        }
+
+        if (!string.IsNullOrWhiteSpace(trainerFullName))
+        {
+            order.SetProperty("TrainerFullName", trainerFullName);
+        }
+    }
+
+    private async Task EnrichOrderDisplayNamesAsync(IReadOnlyList<Order> orders)
+    {
+        if (orders.Count == 0)
+        {
+            return;
+        }
+
+        var studentIds = orders.Select(x => x.StudentId).Distinct().ToList();
+        var trainerProfileIds = orders.Select(x => x.TrainerProfileId).Distinct().ToList();
+
+        var trainerProfilesQuery = await _trainerProfileRepository.GetQueryableAsync();
+        var trainerProfiles = await AsyncExecuter.ToListAsync(trainerProfilesQuery.Where(x => trainerProfileIds.Contains(x.Id)));
+        var trainerProfileMap = trainerProfiles.ToDictionary(x => x.Id, x => x.UserId);
+
+        var userIds = studentIds
+            .Concat(trainerProfiles.Select(x => x.UserId))
+            .Distinct()
+            .ToList();
+
+        var usersQuery = await _identityUserRepository.GetQueryableAsync();
+        var users = await AsyncExecuter.ToListAsync(usersQuery.Where(x => userIds.Contains(x.Id)));
+        var userNameMap = users.ToDictionary(x => x.Id, x => BuildFullName(x.Name, x.Surname));
+
+        var dirtyOrders = new List<Order>();
+        foreach (var order in orders)
+        {
+            var studentFullName = order.GetProperty<string>("StudentFullName");
+            if (string.IsNullOrWhiteSpace(studentFullName) && userNameMap.TryGetValue(order.StudentId, out var resolvedStudentName) && !string.IsNullOrWhiteSpace(resolvedStudentName))
+            {
+                order.SetProperty("StudentFullName", resolvedStudentName);
+                dirtyOrders.Add(order);
+            }
+
+            var trainerFullName = order.GetProperty<string>("TrainerFullName");
+            if (string.IsNullOrWhiteSpace(trainerFullName)
+                && trainerProfileMap.TryGetValue(order.TrainerProfileId, out var trainerUserId)
+                && userNameMap.TryGetValue(trainerUserId, out var resolvedTrainerName)
+                && !string.IsNullOrWhiteSpace(resolvedTrainerName))
+            {
+                order.SetProperty("TrainerFullName", resolvedTrainerName);
+                if (!dirtyOrders.Contains(order))
+                {
+                    dirtyOrders.Add(order);
+                }
+            }
+        }
+
+        if (dirtyOrders.Count > 0)
+        {
+            await _orderRepository.UpdateManyAsync(dirtyOrders);
+        }
+    }
+
+    private OrderDto MapOrderToDto(Order order)
+    {
+        var dto = ObjectMapper.Map<Order, OrderDto>(order);
+        dto.StudentFullName = order.GetProperty<string>("StudentFullName");
+        dto.TrainerFullName = order.GetProperty<string>("TrainerFullName");
+        return dto;
+    }
+
+    private static string? BuildFullName(string? name, string? surname)
+    {
+        var fullName = $"{name} {surname}".Trim();
+        return string.IsNullOrWhiteSpace(fullName) ? null : fullName;
     }
 }

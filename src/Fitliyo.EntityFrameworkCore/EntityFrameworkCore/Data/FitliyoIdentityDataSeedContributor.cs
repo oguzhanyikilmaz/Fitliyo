@@ -23,6 +23,17 @@ public class FitliyoIdentityDataSeedContributor : IDataSeedContributor, ITransie
     public const string StudentUserName = "ogrenci";
     public const string StudentEmail = "ogrenci@fitliyo.com";
     public const string StudentPassword = "Test123!";
+    private static readonly (string UserName, string Email, string Password, string Role)[] AdditionalUsers =
+    [
+        ("egitmen2", "egitmen2@fitliyo.com", "Test123!", RoleTrainer),
+        ("egitmen3", "egitmen3@fitliyo.com", "Test123!", RoleTrainer),
+        ("egitmen4", "egitmen4@fitliyo.com", "Test123!", RoleTrainer),
+        ("egitmen5", "egitmen5@fitliyo.com", "Test123!", RoleTrainer),
+        ("ogrenci2", "ogrenci2@fitliyo.com", "Test123!", RoleStudent),
+        ("ogrenci3", "ogrenci3@fitliyo.com", "Test123!", RoleStudent),
+        ("ogrenci4", "ogrenci4@fitliyo.com", "Test123!", RoleStudent),
+        ("ogrenci5", "ogrenci5@fitliyo.com", "Test123!", RoleStudent)
+    ];
 
     public const string RoleAdmin = "Admin";
     public const string RoleTrainer = "Trainer";
@@ -58,6 +69,7 @@ public class FitliyoIdentityDataSeedContributor : IDataSeedContributor, ITransie
         await CreateAdminUserIfNotExistsAsync(context);
         await CreateTrainerUserIfNotExistsAsync(context);
         await CreateStudentUserIfNotExistsAsync(context);
+        await CreateAdditionalUsersIfNotExistsAsync(context);
     }
 
     private async Task CreateRolesIfNotExistsAsync()
@@ -121,5 +133,21 @@ public class FitliyoIdentityDataSeedContributor : IDataSeedContributor, ITransie
         await _userManager.CreateAsync(student, StudentPassword);
         await _userManager.AddToRoleAsync(student, RoleStudent);
         _logger.LogInformation("Öğrenci kullanıcı oluşturuldu: {UserName} ({Email})", StudentUserName, StudentEmail);
+    }
+
+    private async Task CreateAdditionalUsersIfNotExistsAsync(DataSeedContext context)
+    {
+        foreach (var (userName, email, password, role) in AdditionalUsers)
+        {
+            if (await _userRepository.FindByNormalizedUserNameAsync(userName.ToUpperInvariant()) != null)
+            {
+                continue;
+            }
+
+            var user = new IdentityUser(_guidGenerator.Create(), userName, email, context.TenantId);
+            await _userManager.CreateAsync(user, password);
+            await _userManager.AddToRoleAsync(user, role);
+            _logger.LogInformation("Ek kullanıcı oluşturuldu: {UserName} ({Role})", userName, role);
+        }
     }
 }

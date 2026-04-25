@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Dynamic.Core;
 using System.Threading.Tasks;
@@ -9,7 +10,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Identity;
 using Volo.Abp.Users;
 
 namespace Fitliyo.ServicePackages;
@@ -19,20 +22,24 @@ public class ServicePackageAppService : FitliyoAppService, IServicePackageAppSer
 {
     private readonly IRepository<ServicePackage, Guid> _packageRepository;
     private readonly IRepository<TrainerProfile, Guid> _trainerProfileRepository;
+    private readonly IRepository<IdentityUser, Guid> _identityUserRepository;
 
     public ServicePackageAppService(
         IRepository<ServicePackage, Guid> packageRepository,
-        IRepository<TrainerProfile, Guid> trainerProfileRepository)
+        IRepository<TrainerProfile, Guid> trainerProfileRepository,
+        IRepository<IdentityUser, Guid> identityUserRepository)
     {
         _packageRepository = packageRepository;
         _trainerProfileRepository = trainerProfileRepository;
+        _identityUserRepository = identityUserRepository;
     }
 
     [AllowAnonymous]
     public async Task<ServicePackageDto> GetAsync(Guid id)
     {
         var entity = await _packageRepository.GetAsync(id);
-        return ObjectMapper.Map<ServicePackage, ServicePackageDto>(entity);
+        await EnrichPackageDisplayNamesAsync([entity]);
+        return MapPackageToDto(entity);
     }
 
     [AllowAnonymous]
@@ -96,7 +103,8 @@ public class ServicePackageAppService : FitliyoAppService, IServicePackageAppSer
         queryable = queryable.PageBy(input);
 
         var entities = await AsyncExecuter.ToListAsync(queryable);
-        var dtos = entities.Select(x => ObjectMapper.Map<ServicePackage, ServicePackageDto>(x)).ToList();
+        await EnrichPackageDisplayNamesAsync(entities);
+        var dtos = entities.Select(MapPackageToDto).ToList();
 
         return new PagedResultDto<ServicePackageDto>(totalCount, dtos);
     }
@@ -114,11 +122,12 @@ public class ServicePackageAppService : FitliyoAppService, IServicePackageAppSer
             input.Price);
 
         ApplyDtoToEntity(input, entity);
+        await PopulatePackageDisplayNameAsync(entity, trainerProfile);
 
         await _packageRepository.InsertAsync(entity);
         Logger.LogInformation("Hizmet paketi oluşturuldu: {PackageId}, Eğitmen: {TrainerProfileId}", entity.Id, trainerProfile.Id);
 
-        return ObjectMapper.Map<ServicePackage, ServicePackageDto>(entity);
+        return MapPackageToDto(entity);
     }
 
     [Authorize(FitliyoPermissions.Packages.Edit)]
@@ -131,11 +140,13 @@ public class ServicePackageAppService : FitliyoAppService, IServicePackageAppSer
         entity.PackageType = input.PackageType;
         entity.Price = input.Price;
         ApplyDtoToEntity(input, entity);
+        var trainerProfile = await _trainerProfileRepository.GetAsync(entity.TrainerProfileId);
+        await PopulatePackageDisplayNameAsync(entity, trainerProfile);
 
         await _packageRepository.UpdateAsync(entity);
         Logger.LogInformation("Hizmet paketi güncellendi: {PackageId}", entity.Id);
 
-        return ObjectMapper.Map<ServicePackage, ServicePackageDto>(entity);
+        return MapPackageToDto(entity);
     }
 
     [Authorize(FitliyoPermissions.Packages.Delete)]
@@ -188,5 +199,69 @@ public class ServicePackageAppService : FitliyoAppService, IServicePackageAppSer
         entity.WhatIsIncluded = input.WhatIsIncluded;
         entity.WhatIsNotIncluded = input.WhatIsNotIncluded;
         entity.Tags = input.Tags;
+    }
+
+    private async Task PopulatePackageDisplayNameAsync(ServicePackage package, TrainerProfile trainerProfile)
+    {
+        var trainerUser = await _identityUserRepository.FindAsync(trainerProfile.UserId);
+        var trainerFullName = BuildFullName(trainerUser?.Name, trainerUser?.Surname);
+        if (!string.IsNullOrWhiteSpace(trainerFullName))
+        {
+            package.SetProperty("TrainerFullName", trainerFullName);
+        }
+    }
+
+    private async Task EnrichPackageDisplayNamesAsync(IReadOnlyList<ServicePackage> packages)
+    {
+        if (packages.Count == 0)
+        {
+            return;
+        }
+
+        var trainerProfileIds = packages.Select(x => x.TrainerProfileId).Distinct().ToList();
+        var trainerProfilesQuery = await _trainerProfileRepository.GetQueryableAsync();
+        var trainerProfiles = await AsyncExecuter.ToListAsync(trainerProfilesQuery.Where(x => trainerProfileIds.Contains(x.Id)));
+        var trainerProfileMap = trainerProfiles.ToDictionary(x => x.Id, x => x.UserId);
+
+        var userIds = trainerProfiles.Select(x => x.UserId).Distinct().ToList();
+        var usersQuery = await _identityUserRepository.GetQueryableAsync();
+        var users = await AsyncExecuter.ToListAsync(usersQuery.Where(x => userIds.Contains(x.Id)));
+        var userNameMap = users.ToDictionary(x => x.Id, x => BuildFullName(x.Name, x.Surname));
+
+        var dirtyPackages = new List<ServicePackage>();
+        foreach (var package in packages)
+        {
+            var existingName = package.GetProperty<string>("TrainerFullName");
+            if (!string.IsNullOrWhiteSpace(existingName))
+            {
+                continue;
+            }
+
+            if (trainerProfileMap.TryGetValue(package.TrainerProfileId, out var trainerUserId)
+                && userNameMap.TryGetValue(trainerUserId, out var resolvedName)
+                && !string.IsNullOrWhiteSpace(resolvedName))
+            {
+                package.SetProperty("TrainerFullName", resolvedName);
+                dirtyPackages.Add(package);
+            }
+        }
+
+        if (dirtyPackages.Count > 0)
+        {
+            await _packageRepository.UpdateManyAsync(dirtyPackages);
+        }
+    }
+
+    private ServicePackageDto MapPackageToDto(ServicePackage package)
+    {
+        var dto = ObjectMapper.Map<ServicePackage, ServicePackageDto>(package);
+        dto.TrainerFullName = package.GetProperty<string>("TrainerFullName");
+        return dto;
+    }
+
+    private static string? BuildFullName(string? name, string? surname)
+    {
+        var fullName = $"{name} {surname}".Trim();
+        return string.IsNullOrWhiteSpace(fullName) ? null : fullName;
     }
 }

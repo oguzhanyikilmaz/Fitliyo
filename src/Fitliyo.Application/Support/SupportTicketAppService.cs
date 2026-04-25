@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Dynamic.Core;
 using System.Threading.Tasks;
@@ -7,7 +8,9 @@ using Fitliyo.Permissions;
 using Fitliyo.Support.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp.Application.Dtos;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Identity;
 using Volo.Abp.Users;
 
 namespace Fitliyo.Support;
@@ -16,10 +19,14 @@ namespace Fitliyo.Support;
 public class SupportTicketAppService : FitliyoAppService, ISupportTicketAppService
 {
     private readonly IRepository<SupportTicket, Guid> _repository;
+    private readonly IRepository<IdentityUser, Guid> _identityUserRepository;
 
-    public SupportTicketAppService(IRepository<SupportTicket, Guid> repository)
+    public SupportTicketAppService(
+        IRepository<SupportTicket, Guid> repository,
+        IRepository<IdentityUser, Guid> identityUserRepository)
     {
         _repository = repository;
+        _identityUserRepository = identityUserRepository;
     }
 
     [Authorize(FitliyoPermissions.Support.Default)]
@@ -33,8 +40,9 @@ public class SupportTicketAppService : FitliyoAppService, ISupportTicketAppServi
             input.Category,
             userId,
             input.OrderId);
+        await PopulateTicketDisplayNameAsync(entity);
         await _repository.InsertAsync(entity);
-        return ObjectMapper.Map<SupportTicket, SupportTicketDto>(entity);
+        return MapTicketToDto(entity);
     }
 
     [Authorize(FitliyoPermissions.Support.Default)]
@@ -44,7 +52,8 @@ public class SupportTicketAppService : FitliyoAppService, ISupportTicketAppServi
         var userId = (CurrentUser.Id ?? Guid.Empty);
         if (entity.UserId != userId)
             await AuthorizationService.CheckAsync(FitliyoPermissions.Support.Manage);
-        return ObjectMapper.Map<SupportTicket, SupportTicketDto>(entity);
+        await EnrichTicketDisplayNamesAsync([entity]);
+        return MapTicketToDto(entity);
     }
 
     [Authorize(FitliyoPermissions.Support.Default)]
@@ -59,7 +68,8 @@ public class SupportTicketAppService : FitliyoAppService, ISupportTicketAppServi
         queryable = !string.IsNullOrWhiteSpace(input.Sorting) ? queryable.OrderBy(input.Sorting) : queryable.OrderByDescending(x => x.CreationTime);
         queryable = queryable.PageBy(input);
         var items = await AsyncExecuter.ToListAsync(queryable);
-        return new PagedResultDto<SupportTicketDto>(totalCount, items.Select(x => ObjectMapper.Map<SupportTicket, SupportTicketDto>(x)).ToList());
+        await EnrichTicketDisplayNamesAsync(items);
+        return new PagedResultDto<SupportTicketDto>(totalCount, items.Select(MapTicketToDto).ToList());
     }
 
     [Authorize(FitliyoPermissions.Support.Manage)]
@@ -72,7 +82,8 @@ public class SupportTicketAppService : FitliyoAppService, ISupportTicketAppServi
         queryable = !string.IsNullOrWhiteSpace(input.Sorting) ? queryable.OrderBy(input.Sorting) : queryable.OrderByDescending(x => x.CreationTime);
         queryable = queryable.PageBy(input);
         var items = await AsyncExecuter.ToListAsync(queryable);
-        return new PagedResultDto<SupportTicketDto>(totalCount, items.Select(x => ObjectMapper.Map<SupportTicket, SupportTicketDto>(x)).ToList());
+        await EnrichTicketDisplayNamesAsync(items);
+        return new PagedResultDto<SupportTicketDto>(totalCount, items.Select(MapTicketToDto).ToList());
     }
 
     [Authorize(FitliyoPermissions.Support.Manage)]
@@ -81,7 +92,8 @@ public class SupportTicketAppService : FitliyoAppService, ISupportTicketAppServi
         var entity = await _repository.GetAsync(id);
         entity.SetAdminReply(input.AdminReply);
         await _repository.UpdateAsync(entity);
-        return ObjectMapper.Map<SupportTicket, SupportTicketDto>(entity);
+        await EnrichTicketDisplayNamesAsync([entity]);
+        return MapTicketToDto(entity);
     }
 
     [Authorize(FitliyoPermissions.Support.Manage)]
@@ -90,6 +102,84 @@ public class SupportTicketAppService : FitliyoAppService, ISupportTicketAppServi
         var entity = await _repository.GetAsync(id);
         entity.Status = status;
         await _repository.UpdateAsync(entity);
-        return ObjectMapper.Map<SupportTicket, SupportTicketDto>(entity);
+        await EnrichTicketDisplayNamesAsync([entity]);
+        return MapTicketToDto(entity);
+    }
+
+    private async Task PopulateTicketDisplayNameAsync(SupportTicket ticket)
+    {
+        if (!ticket.UserId.HasValue)
+        {
+            return;
+        }
+
+        var user = await _identityUserRepository.FindAsync(ticket.UserId.Value);
+        var fullName = BuildFullName(user?.Name, user?.Surname);
+        if (!string.IsNullOrWhiteSpace(fullName))
+        {
+            ticket.SetProperty("UserFullName", fullName);
+        }
+    }
+
+    private async Task EnrichTicketDisplayNamesAsync(IReadOnlyList<SupportTicket> tickets)
+    {
+        if (tickets.Count == 0)
+        {
+            return;
+        }
+
+        var userIds = tickets
+            .Where(x => x.UserId.HasValue)
+            .Select(x => x.UserId!.Value)
+            .Distinct()
+            .ToList();
+
+        if (userIds.Count == 0)
+        {
+            return;
+        }
+
+        var usersQuery = await _identityUserRepository.GetQueryableAsync();
+        var users = await AsyncExecuter.ToListAsync(usersQuery.Where(x => userIds.Contains(x.Id)));
+        var userNameMap = users.ToDictionary(x => x.Id, x => BuildFullName(x.Name, x.Surname));
+
+        var dirtyTickets = new List<SupportTicket>();
+        foreach (var ticket in tickets)
+        {
+            if (!ticket.UserId.HasValue)
+            {
+                continue;
+            }
+
+            var existingName = ticket.GetProperty<string>("UserFullName");
+            if (!string.IsNullOrWhiteSpace(existingName))
+            {
+                continue;
+            }
+
+            if (userNameMap.TryGetValue(ticket.UserId.Value, out var resolvedName) && !string.IsNullOrWhiteSpace(resolvedName))
+            {
+                ticket.SetProperty("UserFullName", resolvedName);
+                dirtyTickets.Add(ticket);
+            }
+        }
+
+        if (dirtyTickets.Count > 0)
+        {
+            await _repository.UpdateManyAsync(dirtyTickets);
+        }
+    }
+
+    private SupportTicketDto MapTicketToDto(SupportTicket ticket)
+    {
+        var dto = ObjectMapper.Map<SupportTicket, SupportTicketDto>(ticket);
+        dto.UserFullName = ticket.GetProperty<string>("UserFullName");
+        return dto;
+    }
+
+    private static string? BuildFullName(string? name, string? surname)
+    {
+        var fullName = $"{name} {surname}".Trim();
+        return string.IsNullOrWhiteSpace(fullName) ? null : fullName;
     }
 }

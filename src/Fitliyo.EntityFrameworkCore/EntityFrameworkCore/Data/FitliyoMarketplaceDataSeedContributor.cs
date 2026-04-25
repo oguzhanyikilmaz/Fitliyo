@@ -57,6 +57,11 @@ public class FitliyoMarketplaceDataSeedContributor : IDataSeedContributor, ITran
     private readonly IRepository<UserProfile, Guid> _userProfileRepository;
     private readonly IRepository<WithdrawalRequest, Guid> _withdrawalRequestRepository;
     private readonly IRepository<Dispute, Guid> _disputeRepository;
+    private readonly IRepository<PackageAvailabilitySchedule, Guid> _packageAvailabilityScheduleRepository;
+    private readonly IRepository<PackageUnavailableDate, Guid> _packageUnavailableDateRepository;
+    private readonly IRepository<TrainerSubscription, Guid> _trainerSubscriptionRepository;
+    private readonly IRepository<WalletTransaction, Guid> _walletTransactionRepository;
+    private readonly IRepository<ReviewHelpfulVote, Guid> _reviewHelpfulVoteRepository;
     private readonly ILogger<FitliyoMarketplaceDataSeedContributor> _logger;
 
     public FitliyoMarketplaceDataSeedContributor(
@@ -83,6 +88,11 @@ public class FitliyoMarketplaceDataSeedContributor : IDataSeedContributor, ITran
         IRepository<UserProfile, Guid> userProfileRepository,
         IRepository<WithdrawalRequest, Guid> withdrawalRequestRepository,
         IRepository<Dispute, Guid> disputeRepository,
+        IRepository<PackageAvailabilitySchedule, Guid> packageAvailabilityScheduleRepository,
+        IRepository<PackageUnavailableDate, Guid> packageUnavailableDateRepository,
+        IRepository<TrainerSubscription, Guid> trainerSubscriptionRepository,
+        IRepository<WalletTransaction, Guid> walletTransactionRepository,
+        IRepository<ReviewHelpfulVote, Guid> reviewHelpfulVoteRepository,
         ILogger<FitliyoMarketplaceDataSeedContributor> logger)
     {
         _userRepository = userRepository;
@@ -108,6 +118,11 @@ public class FitliyoMarketplaceDataSeedContributor : IDataSeedContributor, ITran
         _userProfileRepository = userProfileRepository;
         _withdrawalRequestRepository = withdrawalRequestRepository;
         _disputeRepository = disputeRepository;
+        _packageAvailabilityScheduleRepository = packageAvailabilityScheduleRepository;
+        _packageUnavailableDateRepository = packageUnavailableDateRepository;
+        _trainerSubscriptionRepository = trainerSubscriptionRepository;
+        _walletTransactionRepository = walletTransactionRepository;
+        _reviewHelpfulVoteRepository = reviewHelpfulVoteRepository;
         _logger = logger;
     }
 
@@ -115,19 +130,28 @@ public class FitliyoMarketplaceDataSeedContributor : IDataSeedContributor, ITran
     public virtual async Task SeedAsync(DataSeedContext context)
     {
         var admin = await _userRepository.FindByNormalizedUserNameAsync("ADMINFITLIYO");
-        var trainerUser = await _userRepository.FindByNormalizedUserNameAsync("EGITMEN");
-        var studentUser = await _userRepository.FindByNormalizedUserNameAsync("OGRENCI");
+        var trainerUsers = new List<IdentityUser>();
+        var studentUsers = new List<IdentityUser>();
+        foreach (var uname in new[] { "EGITMEN", "EGITMEN2", "EGITMEN3", "EGITMEN4", "EGITMEN5" })
+        {
+            var user = await _userRepository.FindByNormalizedUserNameAsync(uname);
+            if (user != null) trainerUsers.Add(user);
+        }
+        foreach (var uname in new[] { "OGRENCI", "OGRENCI2", "OGRENCI3", "OGRENCI4", "OGRENCI5" })
+        {
+            var user = await _userRepository.FindByNormalizedUserNameAsync(uname);
+            if (user != null) studentUsers.Add(user);
+        }
 
-        if (trainerUser == null || studentUser == null)
+        if (trainerUsers.Count == 0 || studentUsers.Count == 0)
         {
             _logger.LogWarning("Marketplace seed atlandı: Önce DbMigrator ile admin/egitmen/ogrenci kullanıcılarını oluşturun.");
             return;
         }
 
-        if (await _trainerProfileRepository.AnyAsync(x => x.UserId == trainerUser.Id))
+        if (await _trainerProfileRepository.AnyAsync(x => x.UserId == trainerUsers[0].Id))
         {
-            _logger.LogInformation("Marketplace test verileri zaten mevcut, seed atlanıyor.");
-            return;
+            _logger.LogInformation("Marketplace seed artımlı çalışacak: mevcut veriler korunup eksik domain kayıtları tamamlanacak.");
         }
 
         _logger.LogInformation("Marketplace test verileri ekleniyor...");
@@ -140,18 +164,50 @@ public class FitliyoMarketplaceDataSeedContributor : IDataSeedContributor, ITran
         var catYoga = await SeedCategoryAsync("Yoga", "yoga", catFitness.Id, 11);
         var categoryIds = new[] { catFitness.Id, catSpor.Id, catBeslenme.Id, catPilates.Id, catYoga.Id };
 
-        var trainerProfile = await SeedTrainerProfileAsync(trainerUser.Id);
-        await SeedTrainerCertificatesAsync(trainerProfile.Id, 5);
-        await SeedTrainerGalleriesAsync(trainerProfile.Id, 5);
+        var trainerProfiles = new List<TrainerProfile>();
+        var slugs = new[]
+        {
+            "ahmet-yilmaz-personal-trainer",
+            "elif-kaya-diyetisyen",
+            "mert-arslan-fitness-coach",
+            "zeynep-aksoy-pilates-coach",
+            "can-demir-yoga-instructor"
+        };
+        for (var i = 0; i < Math.Min(5, trainerUsers.Count); i++)
+        {
+            var existingProfile = await _trainerProfileRepository.FirstOrDefaultAsync(x => x.UserId == trainerUsers[i].Id);
+            var profile = existingProfile ?? await SeedTrainerProfileAsync(trainerUsers[i].Id, slugs[i], i);
+            trainerProfiles.Add(profile);
+            if (!await _trainerCertificateRepository.AnyAsync(x => x.TrainerProfileId == profile.Id))
+            {
+                await SeedTrainerCertificatesAsync(profile.Id, 5);
+            }
+            if (!await _trainerGalleryRepository.AnyAsync(x => x.TrainerProfileId == profile.Id))
+            {
+                await SeedTrainerGalleriesAsync(profile.Id, 5);
+            }
+        }
         await _dbContext.SaveChangesAsync();
-        await SeedTrainerCategoryMappingsAsync(trainerProfile.Id, categoryIds);
+        foreach (var profile in trainerProfiles)
+        {
+            if (!await _dbContext.TrainerCategoryMappings.AnyAsync(x => x.TrainerProfileId == profile.Id))
+            {
+                await SeedTrainerCategoryMappingsAsync(profile.Id, categoryIds);
+            }
+        }
 
-        await SeedSubscriptionPlansAsync();
-        var wallet = await SeedTrainerWalletAsync(trainerProfile.Id);
-        var packages = await SeedServicePackagesAsync(trainerProfile.Id, 5);
+        var plans = await SeedSubscriptionPlansAsync();
+        var wallets = new List<TrainerWallet>();
+        var packages = new List<ServicePackage>();
+        foreach (var profile in trainerProfiles)
+        {
+            wallets.Add(await SeedTrainerWalletAsync(profile.Id));
+            packages.AddRange(await SeedServicePackagesAsync(profile.Id, 5));
+        }
 
-        var orders = await SeedOrdersAsync(studentUser.Id, trainerProfile.Id, packages, 5);
-        await SeedSessionsAsync(orders, trainerProfile.Id, studentUser.Id);
+        var studentPool = studentUsers.Take(5).Select(x => x.Id).ToList();
+        var orders = await SeedOrdersAsync(studentPool, trainerProfiles.Select(x => x.Id).ToList(), packages, 30);
+        await SeedSessionsAsync(orders);
         var payments = await SeedPaymentsAsync(orders);
         for (var i = 0; i < orders.Count; i++)
         {
@@ -159,17 +215,24 @@ public class FitliyoMarketplaceDataSeedContributor : IDataSeedContributor, ITran
             orders[i].Complete();
             await _orderRepository.UpdateAsync(orders[i]);
         }
-        await SeedReviewsAsync(orders, studentUser.Id, trainerProfile.Id, packages);
+        await SeedReviewsAsync(orders, packages);
+        await SeedReviewHelpfulVotesAsync(orders.Count);
 
-        await SeedConversationsAndMessagesAsync(studentUser.Id, trainerUser.Id, 5);
-        await SeedNotificationsAsync(studentUser.Id, trainerUser.Id, 5);
-        await SeedSupportTicketsAsync(studentUser.Id, 5);
-        await SeedFeaturedListingsAsync(trainerProfile.Id, packages, 5);
-        await SeedBlogPostsAsync(5);
-        await SeedUserProfilesAsync(trainerUser.Id, studentUser.Id);
-        await SeedWithdrawalRequestsAsync(wallet.Id, 5);
+        await SeedConversationsAndMessagesAsync(studentPool[0], trainerUsers[0].Id, 5);
+        await SeedNotificationsAsync(studentPool[0], trainerUsers[0].Id, 5);
+        await SeedSupportTicketsAsync(studentPool[0], 5);
+        await SeedFeaturedListingsAsync(trainerProfiles[0].Id, packages, 6);
+        await SeedBlogPostsAsync(6);
+        await SeedUserProfilesAsync(trainerUsers.Select(x => x.Id).Take(5).ToList(), studentPool);
+        foreach (var wallet in wallets)
+        {
+            await SeedWithdrawalRequestsAsync(wallet.Id, 6);
+            await SeedWalletTransactionsAsync(wallet.Id, 6);
+        }
+        await SeedTrainerSubscriptionsAsync(trainerProfiles.Select(x => x.Id).ToList(), plans);
+        await SeedPackageSchedulesAndUnavailabilitiesAsync(packages, 6);
         if (admin != null)
-            await SeedDisputesAsync(orders, studentUser.Id, admin.Id, 5);
+            await SeedDisputesAsync(orders, studentPool[0], admin.Id, 6);
     }
 
     private async Task<Category> SeedCategoryAsync(string name, string slug, Guid? parentId, int sortOrder)
@@ -188,25 +251,42 @@ public class FitliyoMarketplaceDataSeedContributor : IDataSeedContributor, ITran
         return cat;
     }
 
-    private async Task<TrainerProfile> SeedTrainerProfileAsync(Guid userId)
+    private async Task<TrainerProfile> SeedTrainerProfileAsync(Guid userId, string slug, int variant = 0)
     {
-        var id = _guidGenerator.Create();
-        var p = new TrainerProfile(id, userId, "ahmet-yilmaz-personal-trainer", TrainerType.PersonalTrainer)
+        var existing = await _dbContext.TrainerProfiles
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.UserId == userId || x.Slug == slug);
+        if (existing != null)
         {
-            Bio = "10 yılı aşkın deneyimle kişisel antrenör ve beslenme danışmanı. Spor bilimleri mezunu, sertifikalı CPT. Hedefinize ulaşmanız için kişiselleştirilmiş programlar sunuyorum.",
-            ExperienceYears = 10,
-            City = "İstanbul",
+            return existing;
+        }
+
+        var id = _guidGenerator.Create();
+        var trainerTypes = new[]
+        {
+            TrainerType.PersonalTrainer,
+            TrainerType.Dietitian,
+            TrainerType.BasketballCoach,
+            TrainerType.YogaInstructor,
+            TrainerType.SwimmingCoach
+        };
+        var cities = new[] { "İstanbul", "Ankara", "İzmir", "Bursa", "Antalya" };
+        var p = new TrainerProfile(id, userId, slug, trainerTypes[variant % trainerTypes.Length])
+        {
+            Bio = "Spor bilimleri altyapısıyla bireysel hedeflere uygun programlar sunan profesyonel eğitmen.",
+            ExperienceYears = 6 + variant,
+            City = cities[variant % cities.Length],
             District = "Kadıköy",
             IsOnlineAvailable = true,
             IsOnSiteAvailable = true,
-            AverageRating = 4.8m,
-            TotalReviewCount = 24,
-            TotalStudentCount = 45,
+            AverageRating = 4.4m + (variant * 0.1m),
+            TotalReviewCount = 10 + (variant * 3),
+            TotalStudentCount = 20 + (variant * 5),
             IsVerified = true,
             VerificationBadge = "Doğrulanmış Eğitmen",
-            ProfileCompletionPct = 95,
-            InstagramUrl = "https://instagram.com/ahmet_yilmaz_pt",
-            WebsiteUrl = "https://ahmetyilmaz.fit"
+            ProfileCompletionPct = 85 + variant,
+            InstagramUrl = $"https://instagram.com/{slug}",
+            WebsiteUrl = $"https://{slug}.fit"
         };
         await _dbContext.TrainerProfiles.AddAsync(p);
         _logger.LogInformation("Eğitmen profili seed: {Slug}", p.Slug);
@@ -277,12 +357,16 @@ public class FitliyoMarketplaceDataSeedContributor : IDataSeedContributor, ITran
         _logger.LogInformation("Eğitmen-kategori eşleşmeleri seed edildi.");
     }
 
-    private async Task SeedSubscriptionPlansAsync()
+    private async Task<List<SubscriptionPlan>> SeedSubscriptionPlansAsync()
     {
+        var existingPlans = await _subscriptionPlanRepository.GetListAsync();
+        if (existingPlans.Count >= 5)
+        {
+            return existingPlans;
+        }
+
         try
         {
-            if (await _subscriptionPlanRepository.AnyAsync()) return;
-
             var free = new SubscriptionPlan(_guidGenerator.Create(), "Ücretsiz", SubscriptionTier.Free, 0, 0.15m)
             {
                 Description = "Temel liste, 3 paket limiti.",
@@ -326,15 +410,25 @@ public class FitliyoMarketplaceDataSeedContributor : IDataSeedContributor, ITran
             await _subscriptionPlanRepository.InsertAsync(starter);
             await _subscriptionPlanRepository.InsertAsync(enterprise);
             _logger.LogInformation("Abonelik planları seed edildi: 5 adet.");
+            return new List<SubscriptionPlan> { free, basic, pro, starter, enterprise };
         }
         catch (PostgresException ex) when (ex.SqlState == "42P01")
         {
             _logger.LogWarning("AppSubscriptionPlans tablosu bulunamadı, abonelik planları seed atlanıyor. Eksik migration ekleyip DbMigrator tekrar çalıştırın.");
+            return new List<SubscriptionPlan>();
         }
     }
 
     private async Task<TrainerWallet> SeedTrainerWalletAsync(Guid trainerProfileId)
     {
+        var existing = await _dbContext.TrainerWallets
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.TrainerProfileId == trainerProfileId);
+        if (existing != null)
+        {
+            return existing;
+        }
+
         var w = new TrainerWallet(_guidGenerator.Create(), trainerProfileId);
         w.AddPending(750m);
         w.MovePendingToAvailable(750m);
@@ -383,12 +477,14 @@ public class FitliyoMarketplaceDataSeedContributor : IDataSeedContributor, ITran
         return list;
     }
 
-    private async Task<List<Order>> SeedOrdersAsync(Guid studentId, Guid trainerProfileId, List<ServicePackage> packages, int count = 5)
+    private async Task<List<Order>> SeedOrdersAsync(List<Guid> studentIds, List<Guid> trainerProfileIds, List<ServicePackage> packages, int count = 30)
     {
         var list = new List<Order>();
         for (var i = 0; i < count; i++)
         {
             var package = packages[i % packages.Count];
+            var studentId = studentIds[i % studentIds.Count];
+            var trainerProfileId = trainerProfileIds[i % trainerProfileIds.Count];
             var id = _guidGenerator.Create();
             var orderNum = "ORD-2026-" + Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
             var unitPrice = package.DiscountedPrice ?? package.Price;
@@ -400,13 +496,13 @@ public class FitliyoMarketplaceDataSeedContributor : IDataSeedContributor, ITran
         return list;
     }
 
-    private async Task SeedSessionsAsync(List<Order> orders, Guid trainerProfileId, Guid studentId)
+    private async Task SeedSessionsAsync(List<Order> orders)
     {
         for (var i = 0; i < orders.Count; i++)
         {
             var start = DateTime.Now.AddDays(-(orders.Count - i) * 7).Date.AddHours(10);
             var end = start.AddHours(1);
-            var s = new Session(_guidGenerator.Create(), orders[i].Id, trainerProfileId, studentId, start, end, 1)
+            var s = new Session(_guidGenerator.Create(), orders[i].Id, orders[i].TrainerProfileId, orders[i].StudentId, start, end, 1)
             {
                 MeetingUrl = $"https://meet.example.com/seed-session-{i + 1}",
                 TrainerNotes = "Isınma + antrenman + soğuma.",
@@ -435,7 +531,7 @@ public class FitliyoMarketplaceDataSeedContributor : IDataSeedContributor, ITran
         return list;
     }
 
-    private async Task SeedReviewsAsync(List<Order> orders, Guid studentId, Guid trainerProfileId, List<ServicePackage> packages)
+    private async Task SeedReviewsAsync(List<Order> orders, List<ServicePackage> packages)
     {
         var comments = new[]
         {
@@ -448,7 +544,7 @@ public class FitliyoMarketplaceDataSeedContributor : IDataSeedContributor, ITran
         for (var i = 0; i < orders.Count; i++)
         {
             var order = orders[i];
-            var r = new Review(_guidGenerator.Create(), order.Id, studentId, trainerProfileId, 5)
+            var r = new Review(_guidGenerator.Create(), order.Id, order.StudentId, order.TrainerProfileId, 5)
             {
                 ServicePackageId = order.ServicePackageId,
                 CommunicationRating = 5,
@@ -558,65 +654,77 @@ public class FitliyoMarketplaceDataSeedContributor : IDataSeedContributor, ITran
         _logger.LogInformation("Blog yazıları seed edildi: {Count} adet.", Math.Min(count, posts.Length));
     }
 
-    private async Task SeedUserProfilesAsync(Guid trainerUserId, Guid studentUserId)
+    private async Task SeedUserProfilesAsync(List<Guid> trainerUserIds, List<Guid> studentUserIds)
     {
-        if (await _userProfileRepository.AnyAsync(x => x.UserId == trainerUserId)) return;
-        var trainerProfile = new UserProfile(_guidGenerator.Create(), trainerUserId)
+        foreach (var trainerUserId in trainerUserIds)
         {
-            BirthDate = new DateTime(1988, 5, 15),
-            Gender = Gender.Male,
-            HeightCm = 178m,
-            WeightKg = 82m,
-            BloodType = "A+",
-            ActivityLevel = ActivityLevel.VeryActive,
-            FitnessGoal = FitnessGoal.Maintain,
-            Phone = "+90 532 111 2233",
-            EmergencyContact = "Ayşe Yılmaz - +90 533 444 5566",
-            SleepHoursPerNight = 7,
-            Smoking = false,
-            RestingHeartRate = 58,
-            Notes = "Eğitmen olarak kendi formumu korumak öncelikli."
-        };
-        var studentProfile = new UserProfile(_guidGenerator.Create(), studentUserId)
+            if (await _userProfileRepository.AnyAsync(x => x.UserId == trainerUserId)) continue;
+            var trainerProfile = new UserProfile(_guidGenerator.Create(), trainerUserId)
+            {
+                BirthDate = new DateTime(1988, 5, 15),
+                Gender = Gender.Male,
+                HeightCm = 178m,
+                WeightKg = 82m,
+                BloodType = "A+",
+                ActivityLevel = ActivityLevel.VeryActive,
+                FitnessGoal = FitnessGoal.Maintain,
+                Phone = "+90 532 111 2233",
+                EmergencyContact = "Ayşe Yılmaz - +90 533 444 5566",
+                SleepHoursPerNight = 7,
+                Smoking = false,
+                RestingHeartRate = 58
+            };
+            await _userProfileRepository.InsertAsync(trainerProfile);
+        }
+        foreach (var studentUserId in studentUserIds)
         {
-            BirthDate = new DateTime(1995, 10, 8),
-            Gender = Gender.Female,
-            HeightCm = 165m,
-            WeightKg = 68m,
-            BloodType = "B+",
-            ActivityLevel = ActivityLevel.Light,
-            FitnessGoal = FitnessGoal.LoseWeight,
-            TargetWeightKg = 62m,
-            Phone = "+90 555 777 8899",
-            EmergencyContact = "Mehmet Demir",
-            SleepHoursPerNight = 6,
-            Smoking = false,
-            AlcoholConsumption = "Nadiren",
-            WaistCm = 78m,
-            HipCm = 98m,
-            NeckCm = 32m,
-            Notes = "Kilo vermek ve düzenli egzersiz alışkanlığı kazanmak istiyorum."
-        };
-        await _userProfileRepository.InsertAsync(trainerProfile);
-        await _userProfileRepository.InsertAsync(studentProfile);
-        _logger.LogInformation("Kullanıcı profilleri (sağlık) seed edildi.");
+            if (await _userProfileRepository.AnyAsync(x => x.UserId == studentUserId)) continue;
+            var studentProfile = new UserProfile(_guidGenerator.Create(), studentUserId)
+            {
+                BirthDate = new DateTime(1995, 10, 8),
+                Gender = Gender.Female,
+                HeightCm = 165m,
+                WeightKg = 68m,
+                BloodType = "B+",
+                ActivityLevel = ActivityLevel.Light,
+                FitnessGoal = FitnessGoal.LoseWeight,
+                TargetWeightKg = 62m,
+                Phone = "+90 555 777 8899",
+                EmergencyContact = "Mehmet Demir",
+                SleepHoursPerNight = 6,
+                Smoking = false,
+                AlcoholConsumption = "Nadiren",
+                WaistCm = 78m,
+                HipCm = 98m,
+                NeckCm = 32m
+            };
+            await _userProfileRepository.InsertAsync(studentProfile);
+        }
+        _logger.LogInformation("Kullanıcı profilleri (sağlık) seed edildi: Eğitmen {TrainerCount}, Öğrenci {StudentCount}.", trainerUserIds.Count, studentUserIds.Count);
     }
 
     private async Task SeedWithdrawalRequestsAsync(Guid trainerWalletId, int count = 5)
     {
-        var amounts = new[] { 500m, 300m, 750m, 400m, 600m };
-        var ibans = new[] { "TR330006100519786457841326", "TR330006100519786457841327", "TR330006100519786457841328", "TR330006100519786457841329", "TR330006100519786457841330" };
-        for (var i = 0; i < count; i++)
+        if (await _withdrawalRequestRepository.AnyAsync(x => x.TrainerWalletId == trainerWalletId))
         {
-            var wr = new WithdrawalRequest(_guidGenerator.Create(), trainerWalletId, amounts[i], ibans[i], "Ahmet Yılmaz");
+            return;
+        }
+
+        var amounts = new[] { 500m, 300m, 750m, 400m, 600m, 450m, 520m, 680m };
+        var generatedCount = Math.Min(count, amounts.Length);
+
+        for (var i = 0; i < generatedCount; i++)
+        {
+            var iban = $"TR33000610051978645784{(1326 + i).ToString().PadLeft(4, '0')}";
+            var wr = new WithdrawalRequest(_guidGenerator.Create(), trainerWalletId, amounts[i], iban, "Ahmet Yılmaz");
             await _withdrawalRequestRepository.InsertAsync(wr);
         }
-        _logger.LogInformation("Para çekme talepleri seed edildi: {Count} adet.", count);
+        _logger.LogInformation("Para çekme talepleri seed edildi: {Count} adet.", generatedCount);
     }
 
     private async Task SeedDisputesAsync(List<Order> orders, Guid openedByUserId, Guid resolvedByUserId, int count = 5)
     {
-        var reasons = new[] { "Seans iptal edildi, iade talep ediyorum.", "Hizmet beklentiyi karşılamadı.", "Yanlış paket satıldı.", "İletişim sorunu yaşandı.", "Diğer neden." };
+        var reasons = new[] { "Seans iptal edildi, iade talep ediyorum.", "Hizmet beklentiyi karşılamadı.", "Yanlış paket satıldı.", "İletişim sorunu yaşandı.", "Diğer neden.", "Planlanan saat dışında hizmet verildi." };
         for (var i = 0; i < Math.Min(count, orders.Count); i++)
         {
             var d = new Dispute(_guidGenerator.Create(), orders[i].Id, openedByUserId, DisputeType.Refund, reasons[i]);
@@ -624,5 +732,153 @@ public class FitliyoMarketplaceDataSeedContributor : IDataSeedContributor, ITran
             await _disputeRepository.InsertAsync(d);
         }
         _logger.LogInformation("Uyuşmazlık kayıtları seed edildi: {Count} adet.", Math.Min(count, orders.Count));
+    }
+
+    private async Task SeedTrainerSubscriptionsAsync(List<Guid> trainerProfileIds, List<SubscriptionPlan> plans)
+    {
+        if (plans.Count == 0) return;
+
+        var statuses = new[]
+        {
+            SubscriptionStatus.Active,
+            SubscriptionStatus.PastDue,
+            SubscriptionStatus.Cancelled,
+            SubscriptionStatus.Expired,
+            SubscriptionStatus.Trial
+        };
+
+        for (var i = 0; i < Math.Min(5, trainerProfileIds.Count); i++)
+        {
+            var trainerProfileId = trainerProfileIds[i];
+            if (await _trainerSubscriptionRepository.AnyAsync(x => x.TrainerProfileId == trainerProfileId))
+            {
+                continue;
+            }
+
+            var plan = plans[i % plans.Count];
+            var startDate = DateTime.Now.AddMonths(-(i + 1));
+            var endDate = DateTime.Now.AddMonths(1 + i);
+            var sub = new TrainerSubscription(_guidGenerator.Create(), trainerProfileId, plan.Id, startDate, endDate, plan.Price)
+            {
+                Status = statuses[i % statuses.Length],
+                PaymentReference = $"SUB-SEED-{i + 1:D3}",
+                IsAutoRenew = i % 2 == 0
+            };
+            if (sub.Status == SubscriptionStatus.Cancelled)
+            {
+                sub.CancelledAt = DateTime.Now.AddDays(-5);
+            }
+            await _trainerSubscriptionRepository.InsertAsync(sub);
+        }
+        _logger.LogInformation("TrainerSubscription seed tamamlandı.");
+    }
+
+    private async Task SeedWalletTransactionsAsync(Guid trainerWalletId, int count = 6)
+    {
+        if (await _walletTransactionRepository.AnyAsync(x => x.TrainerWalletId == trainerWalletId))
+        {
+            return;
+        }
+
+        var template = new (WalletTransactionType Type, decimal Amount, string Description)[]
+        {
+            (WalletTransactionType.Credit, 750m, "Sipariş ödemesi"),
+            (WalletTransactionType.Debit, 120m, "Komisyon kesintisi"),
+            (WalletTransactionType.Credit, 450m, "Ek seans geliri"),
+            (WalletTransactionType.Payout, 300m, "Banka hesabına aktarım"),
+            (WalletTransactionType.Refund, 80m, "İade düzeltmesi"),
+            (WalletTransactionType.Credit, 220m, "Yeni paket satışı")
+        };
+
+        decimal balance = 0;
+        for (var i = 0; i < Math.Min(count, template.Length); i++)
+        {
+            var t = template[i];
+            balance += t.Type == WalletTransactionType.Debit || t.Type == WalletTransactionType.Payout ? -t.Amount : t.Amount;
+            var tx = new WalletTransaction(
+                _guidGenerator.Create(),
+                trainerWalletId,
+                t.Type,
+                t.Amount,
+                t.Description,
+                balance);
+            await _walletTransactionRepository.InsertAsync(tx);
+        }
+        _logger.LogInformation("WalletTransaction seed edildi: {Count} adet.", Math.Min(count, template.Length));
+    }
+
+    private async Task SeedPackageSchedulesAndUnavailabilitiesAsync(List<ServicePackage> packages, int countPerDomain = 6)
+    {
+        var daySequence = new[]
+        {
+            DayOfWeekEnum.Monday,
+            DayOfWeekEnum.Tuesday,
+            DayOfWeekEnum.Wednesday,
+            DayOfWeekEnum.Thursday,
+            DayOfWeekEnum.Friday,
+            DayOfWeekEnum.Saturday
+        };
+
+        var scheduleCreated = 0;
+        var unavailableCreated = 0;
+
+        for (var i = 0; i < Math.Min(countPerDomain, packages.Count); i++)
+        {
+            var package = packages[i];
+            if (!await _packageAvailabilityScheduleRepository.AnyAsync(x => x.ServicePackageId == package.Id))
+            {
+                var s = new PackageAvailabilitySchedule(
+                    _guidGenerator.Create(),
+                    package.Id,
+                    daySequence[i % daySequence.Length],
+                    new TimeSpan(9 + (i % 3), 0, 0),
+                    new TimeSpan(10 + (i % 3), 0, 0),
+                    60);
+                await _packageAvailabilityScheduleRepository.InsertAsync(s);
+                scheduleCreated++;
+            }
+
+            if (!await _packageUnavailableDateRepository.AnyAsync(x => x.TrainerProfileId == package.TrainerProfileId && x.UnavailableDate.Date == DateTime.Now.Date.AddDays(i + 1)))
+            {
+                var u = new PackageUnavailableDate(_guidGenerator.Create(), package.TrainerProfileId, DateTime.Now.Date.AddDays(i + 1))
+                {
+                    Reason = i % 2 == 0 ? "Resmi tatil" : "Eğitmen izin günü"
+                };
+                await _packageUnavailableDateRepository.InsertAsync(u);
+                unavailableCreated++;
+            }
+        }
+
+        _logger.LogInformation("PackageAvailabilitySchedule seed: {ScheduleCount}, PackageUnavailableDate seed: {UnavailableCount}", scheduleCreated, unavailableCreated);
+    }
+
+    private async Task SeedReviewHelpfulVotesAsync(int targetCount = 6)
+    {
+        if (await _reviewHelpfulVoteRepository.AnyAsync())
+        {
+            return;
+        }
+
+        var reviews = await _reviewRepository.GetListAsync();
+        var students = new List<IdentityUser>();
+        foreach (var uname in new[] { "OGRENCI", "OGRENCI2", "OGRENCI3", "OGRENCI4", "OGRENCI5" })
+        {
+            var user = await _userRepository.FindByNormalizedUserNameAsync(uname);
+            if (user != null) students.Add(user);
+        }
+        if (reviews.Count == 0 || students.Count == 0)
+        {
+            return;
+        }
+
+        var count = Math.Min(targetCount, reviews.Count);
+        for (var i = 0; i < count; i++)
+        {
+            var review = reviews[i];
+            var voter = students[i % students.Count];
+            var vote = new ReviewHelpfulVote(_guidGenerator.Create(), review.Id, voter.Id, i % 2 == 0);
+            await _reviewHelpfulVoteRepository.InsertAsync(vote);
+        }
+        _logger.LogInformation("ReviewHelpfulVote seed edildi: {Count} adet.", count);
     }
 }

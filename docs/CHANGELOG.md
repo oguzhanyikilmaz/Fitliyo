@@ -1,5 +1,35 @@
 # Fitliyo Changelog
 
+## 2026-04-25 - ABP Web ana sayfa dashboard'a dönüştürüldü
+
+- **Hedef:** Sol paneldeki ana sayfa, yönetim odaklı metrik dashboard olarak yeniden tasarlandı.
+- **KPI kartları:** Kullanıcı, eğitmen, paket, sipariş, abonelik, değerlendirme, bekleyen para çekme ve aylık ciro metrikleri eklendi.
+- **Grafikler:** Son 6 ay sipariş/ciro trend grafiği ve paket tipi dağılım grafiği eklendi.
+- **ABP uyumu:** Kart ve yerleşim yapısı ABP teması ile uyumlu şekilde sade ve yönetilebilir bir düzenle güncellendi.
+
+---
+
+## 2026-04-25 - Admin liste ekranlarında ID yerine isim gösterimi eklendi
+
+- **Hedef:** Marketplace admin listelerinde `studentId`, `trainerProfileId`, `userId` gibi teknik değerler yerine anlamlı ad/soyad gösterimi sağlandı.
+- **Servis güncellemesi:** Order, Review, TrainerProfile, ServicePackage ve SupportTicket servislerinde ilişkili kullanıcı adları `ExtraProperties` içine yazılarak cache'lendi; kayıt oluşturulurken yazılıyor, eski kayıtlarda boşsa listelerken domain'den çözülüp tekrar `ExtraProperties`'e persist ediliyor.
+- **Listeleme fallback akışı:** İsim alanı mevcutsa doğrudan kullanılıyor; yoksa ilgili domain ilişkisi üzerinden tek seferde toplu sorgu ile çözülüyor ve kayıt güncelleniyor.
+- **Kategori güncellemesi:** Category servisinde `ParentCategoryName` alanı eklendi; `parentId` bağlı üst kategori adı `ExtraProperties` içine yazılıyor, listelerde boşsa üst kategori adı çözülüp kalıcılaştırılıyor.
+- **UI güncellemesi:** Admin Marketplace DataTable sütunları isim alanlarına geçirildi; isim yoksa son çare olarak ID gösterilecek şekilde fallback korundu.
+- **Bildirimler:** Notification entity'si `ExtraProperties` taşımadığı için ad/soyad bilgisi listede anlık olarak user domain'inden enrich edilerek döndürülüyor.
+
+---
+
+## 2026-04-25 - Domain bazlı test verisi seeding kapsamı genişletildi
+
+- **Hedef:** Admin paneldeki tüm marketplace/domain ekranlarında anlamlı ve yeterli test datası bulunması için seed kapsamı arttırıldı.
+- **Identity seed genişletme:** Varsayılan kullanıcıların yanına ek eğitmen/öğrenci kullanıcıları eklendi (`egitmen2..5`, `ogrenci2..5`) ve rol atamaları otomatikleştirildi.
+- **Marketplace seed genişletme:** Çoklu eğitmen profilleri üzerinden daha geniş veri üretimi sağlandı; sipariş, paket, ödeme, değerlendirme, blog, öne çıkan, destek, uyuşmazlık, bildirim, para çekme verileri yüksek adetle üretilecek şekilde güncellendi.
+- **Yeni eklenen domain seed’leri:** `TrainerSubscription`, `WalletTransaction`, `PackageAvailabilitySchedule`, `PackageUnavailableDate`, `ReviewHelpfulVote` için de seed akışları eklendi.
+- **Sonuç:** Admin modül ekranlarında listeleme/sayfalama/test akışları için veri kıtlığı azaltıldı; domain kapsamı daha gerçekçi test senaryolarını destekleyecek seviyeye getirildi.
+
+---
+
 ## 2026-04-25 - Local backend port çakışması (5000) düzeltildi
 
 - **Kök neden:** `localhost:5000` portunu macOS `ControlCenter` (AirPlay Receiver) tuttuğu için istekler Fitliyo backend yerine farklı servise gidiyordu; bu nedenle `/api/app/...` çağrıları 404/erişim hatası veriyordu ve breakpoint'ler düşmüyordu.

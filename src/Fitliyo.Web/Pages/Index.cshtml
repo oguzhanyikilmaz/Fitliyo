@@ -1,60 +1,168 @@
 @page
-<div class="row mb-3">
-    <div class="col-xl-6 col-12 d-flex">
-        <div class="card h-lg-100 w-100 overflow-hidden">
+@model Fitliyo.Web.Pages.IndexModel
+@using System.Globalization
+@using System.Text.Json
+
+<div class="row g-3 mb-2">
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card h-100">
             <div class="card-body">
-                <div class="starting-content">
-                    <h3>Getting Started</h3>
-                    <p class="lead text-muted mb-2">Learn how to create and run a new web application using the application startup template.</p>
-                    <a href="https://docs.abp.io/en/commercial/latest/getting-started" class="btn btn-brand mb-4" target="_blank">Getting Started</a>
-
-                    <h4>Web Application Development Tutorial</h4>
-                    <p class="text-muted mb-2">Learn how to build an ABP based web application named Acme.BookStore.</p>
-                    <a href="https://docs.abp.io/en/commercial/latest/tutorials/book-store/part-1?UI=MVC&DB=EF" class="btn btn-primary soft mb-4" target="_blank">Explore Tutorial</a>
-
-                    <h4>Customize Lepton Theme</h4>
-                    <p class="text-muted mb-2">Learn how to customize LeptonX Theme as you wish.</p>
-                    <a href="https://docs.abp.io/en/commercial/latest/themes/lepton/customizing-lepton-theme" class="btn btn-primary soft mb-5 mb-xl-0" target="_blank">Customize Lepton</a>
-                </div>
-                <img class="card-bg-image" src="/images/getting-started/bg-01.png">
+                <div class="text-muted small">Toplam Kullanıcı</div>
+                <div class="display-6 fw-bold">@Model.Stats.TotalUsers</div>
+                <div class="text-muted small">Aktif Eğitmen: @Model.Stats.TotalTrainers</div>
             </div>
         </div>
     </div>
-
-    <div class="col-xl-3 col-md-6 d-flex">
-        <div class="row">
-            <div class="col-12 d-flex">
-                <div class="card overflow-hidden">
-                    <div class="card-body pb-0">
-                        <div class="abp-support abp-logo mb-2"></div>
-                        <p class="text-muted mb-2">You can check for similar problems and solutions, or open a new topic to discuss your specific issue.</p>
-                        <a href="https://support.abp.io/QA/Questions" class="btn btn-brand soft" target="_blank">Visit Support</a>
-                        <img class="" src="/images/getting-started/img-support.png">
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 d-flex">
-                <div class="card h-md-100 overflow-hidden">
-                    <div class="card-body pb-0">
-                        <div class="abp-blog abp-logo mb-2"></div>
-                        <p class="text-muted mb-2">You can find content on .NET development, cross-platform, ASP.NET application templates, ABP-related news, and more.</p>
-                        <a href="https://blog.abp.io/abp" class="btn btn-brand soft" target="_blank">Visit Blog</a>
-                        <img style="margin-bottom: -24px;" src="/images/getting-started/img-blog.png">
-                    </div>
-                </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="text-muted small">Toplam Paket</div>
+                <div class="display-6 fw-bold">@Model.Stats.TotalPackages</div>
+                <div class="text-muted small">Toplam Abonelik: @Model.Stats.TotalSubscriptions</div>
             </div>
         </div>
     </div>
-
-    <div class="col-xl-3 col-md-6 d-flex">
-        <div class="card h-100 overflow-hidden">
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card h-100">
             <div class="card-body">
-                <div class="abp-community abp-logo mb-2"></div>
-                <p class="lead text-muted">A unique community platform for <span class="fw-bold">ABP Lovers!</span></p>
-                <p class="text-muted mb-2">Explore all ABP users' experiences with the ABP Framework, discover articles and videos on how to use ABP, and join raffles for a chance to win surprise gifts!</p>
-                <a class="btn btn-brand soft mb-3" href="https://community.abp.io/" target="_blank">Join ABP Community</a>
+                <div class="text-muted small">Bu Ay Sipariş</div>
+                <div class="display-6 fw-bold">@Model.Stats.MonthlyOrderCount</div>
+                <div class="text-muted small">Toplam Sipariş: @Model.Stats.TotalOrders</div>
             </div>
-            <img class="mt-3" src="/images/getting-started/img-community.png">
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card h-100 border-success-subtle">
+            <div class="card-body">
+                <div class="text-muted small">Bu Ay Ciro</div>
+                <div class="display-6 fw-bold text-success">@Model.Stats.MonthlyRevenue.ToString("N0", CultureInfo.GetCultureInfo("tr-TR")) ₺</div>
+                <div class="text-muted small">Bekleyen Çekim: @Model.Stats.PendingWithdrawals</div>
+            </div>
         </div>
     </div>
 </div>
+
+<div class="row g-3">
+    <div class="col-12 col-xl-8">
+        <div class="card h-100">
+            <div class="card-header border-0 pb-0">
+                <h5 class="mb-0">Sipariş ve Ciro Trendi (Son 6 Ay)</h5>
+            </div>
+            <div class="card-body">
+                <div style="position: relative; height: 340px;">
+                    <canvas id="ordersTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-xl-4">
+        <div class="card h-100">
+            <div class="card-header border-0 pb-0">
+                <h5 class="mb-0">Aktif Paket Dağılımı</h5>
+            </div>
+            <div class="card-body">
+                <div style="position: relative; height: 280px;">
+                    <canvas id="packageTypeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mt-1">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header border-0 pb-0">
+                <h5 class="mb-0">Hızlı Özet</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-12 col-md-4">
+                        <div class="p-3 bg-light rounded">
+                            <div class="text-muted small">Toplam Değerlendirme</div>
+                            <div class="h4 mb-0">@Model.Stats.TotalReviews</div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="p-3 bg-light rounded">
+                            <div class="text-muted small">Toplam Abonelik Planı</div>
+                            <div class="h4 mb-0">@Model.Stats.TotalSubscriptionPlans</div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="p-3 bg-light rounded">
+                            <div class="text-muted small">Bekleyen Para Çekme</div>
+                            <div class="h4 mb-0 text-warning">@Model.Stats.PendingWithdrawals</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        (() => {
+            const labels = @Html.Raw(JsonSerializer.Serialize(Model.MonthlyLabels));
+            const orderCounts = @Html.Raw(JsonSerializer.Serialize(Model.MonthlyOrderCounts));
+            const monthlyRevenue = @Html.Raw(JsonSerializer.Serialize(Model.MonthlyRevenue));
+            const packageTypeLabels = @Html.Raw(JsonSerializer.Serialize(Model.PackageTypeLabels));
+            const packageTypeCounts = @Html.Raw(JsonSerializer.Serialize(Model.PackageTypeCounts));
+
+            const orderCtx = document.getElementById("ordersTrendChart");
+            if (orderCtx) {
+                new Chart(orderCtx, {
+                    type: "bar",
+                    data: {
+                        labels,
+                        datasets: [
+                            {
+                                type: "bar",
+                                label: "Sipariş",
+                                data: orderCounts,
+                                borderRadius: 6,
+                                backgroundColor: "rgba(54, 162, 235, 0.45)",
+                                borderColor: "rgba(54, 162, 235, 1)",
+                                borderWidth: 1
+                            },
+                            {
+                                type: "line",
+                                label: "Ciro (₺)",
+                                data: monthlyRevenue,
+                                yAxisID: "y1",
+                                borderColor: "rgba(75, 192, 192, 1)",
+                                backgroundColor: "rgba(75, 192, 192, 0.2)",
+                                tension: 0.35
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true, title: { display: true, text: "Sipariş Adedi" } },
+                            y1: { beginAtZero: true, position: "right", grid: { drawOnChartArea: false }, title: { display: true, text: "Ciro (₺)" } }
+                        }
+                    }
+                });
+            }
+
+            const packageCtx = document.getElementById("packageTypeChart");
+            if (packageCtx) {
+                new Chart(packageCtx, {
+                    type: "doughnut",
+                    data: {
+                        labels: packageTypeLabels,
+                        datasets: [{
+                            data: packageTypeCounts,
+                            backgroundColor: ["#4e79a7", "#f28e2b", "#e15759", "#76b7b2", "#59a14f"]
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            }
+        })();
+    </script>
+}

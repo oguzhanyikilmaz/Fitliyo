@@ -25,15 +25,20 @@ $(function () {
         planType: { 0: "Ücretsiz", 1: "Aylık", 2: "Yıllık" }
     };
 
+    const l = abp.localization.getResource("Fitliyo");
+
     const labelMap = {
         id: "Id",
         orderNumber: "Sipariş No",
         studentId: "Öğrenci Id",
+        studentFullName: "Öğrenci Ad Soyad",
         trainerProfileId: "Eğitmen Profil Id",
+        trainerFullName: "Eğitmen Ad Soyad",
         netAmount: "Net Tutar",
         status: "Durum",
         paymentStatus: "Ödeme Durumu",
         userId: "Kullanıcı Id",
+        userFullName: "Kullanıcı Ad Soyad",
         slug: "Slug",
         city: "Şehir",
         averageRating: "Ortalama Puan",
@@ -44,6 +49,7 @@ $(function () {
         packageType: "Paket Tipi",
         price: "Fiyat",
         parentId: "Üst Kategori Id",
+        parentCategoryName: "Üst Kategori",
         sortOrder: "Sıra",
         tier: "Seviye",
         planType: "Plan Tipi",
@@ -86,7 +92,66 @@ $(function () {
     function apiPut(url, data) { return abp.ajax({ url, type: "PUT", data: JSON.stringify(data ?? {}) }); }
     function apiDelete(url) { return abp.ajax({ url, type: "DELETE" }); }
 
-    function turkishLabel(key) { return labelMap[key] || key; }
+    function humanizePropertyName(key) {
+        const spaced = String(key)
+            .replace(/([a-z])([A-Z])/g, "$1 $2")
+            .replace(/_/g, " ")
+            .trim();
+
+        const tokenMap = {
+            id: "Id",
+            total: "Toplam",
+            sales: "Satış",
+            count: "Sayısı",
+            average: "Ortalama",
+            rating: "Puan",
+            profile: "Profil",
+            trainer: "Eğitmen",
+            student: "Öğrenci",
+            payment: "Ödeme",
+            status: "Durum",
+            amount: "Tutar",
+            date: "Tarih",
+            time: "Saat",
+            start: "Başlangıç",
+            end: "Bitiş",
+            created: "Oluşturulan",
+            creation: "Oluşturulma",
+            updated: "Güncellenme",
+            user: "Kullanıcı",
+            order: "Sipariş",
+            package: "Paket",
+            blog: "Blog",
+            post: "Yazı",
+            note: "Not",
+            notes: "Notlar",
+            bio: "Biyografi",
+            url: "Url",
+            image: "Görsel",
+            featured: "Öne Çıkan",
+            review: "Yorum",
+            helpful: "Faydalı",
+            wallet: "Cüzdan",
+            transaction: "İşlem"
+        };
+
+        return spaced
+            .split(/\s+/)
+            .map(function (token) {
+                const normalized = token.toLowerCase();
+                if (tokenMap[normalized]) return tokenMap[normalized];
+                return token.charAt(0).toUpperCase() + token.slice(1);
+            })
+            .join(" ");
+    }
+
+    function turkishLabel(key) {
+        const localized = l(`Ui:Field.${key}`);
+        if (localized && localized !== `Ui:Field.${key}`) {
+            return localized;
+        }
+        return labelMap[key] || humanizePropertyName(key);
+    }
     function enumText(key, value) {
         const map = enumMaps[key];
         return map && Object.prototype.hasOwnProperty.call(map, value) ? map[value] : safe(value);
@@ -166,11 +231,31 @@ $(function () {
         return query.toString();
     }
 
+    function normalizePagedResult(result, input) {
+        if (!result) return { items: [], totalCount: 0 };
+        if (Array.isArray(result)) return { items: result, totalCount: result.length };
+        if (Array.isArray(result.items)) {
+            const totalCount = typeof result.totalCount === "number"
+                ? result.totalCount
+                : result.items.length;
+            return { items: result.items, totalCount };
+        }
+        return { items: [], totalCount: 0 };
+    }
+
+    function pagedAjax(fetcher) {
+        return function (input) {
+            return fetcher(input).then(function (result) {
+                return normalizePagedResult(result, input);
+            });
+        };
+    }
+
     function reload() { if (table) table.ajax.reload(); }
 
     function rowUpdateItem(fetchUrl, updateFn, title) {
         return {
-            text: "Detay / Düzenle",
+            text: "Düzenle",
             action: function (d) {
                 apiGet(fetchUrl(d)).then(function (entity) {
                     openUpdateModal(title, entity, function (payload) {
@@ -189,82 +274,97 @@ $(function () {
         };
     }
 
+    function rowDeleteItem(deleteFn, message) {
+        return {
+            text: "Sil",
+            confirmMessage: function () { return message || "Bu kayıt silinsin mi?"; },
+            action: function (d) {
+                return deleteFn(d).then(function () {
+                    notifySuccess("Kayıt silindi.");
+                    reload();
+                }).catch(function (e) {
+                    notifyError(e?.message || "Silme işlemi başarısız.");
+                });
+            }
+        };
+    }
+
     function cfgFor(module) {
         if (module === "orders") {
             return {
-                ajax: function (input) { return apiGet(`${api.order}?${qs(input, { sorting: input.sorting || "creationTime desc" })}`); },
+                ajax: pagedAjax(function (input) { return apiGet(`${api.order}?${qs(input, { sorting: input.sorting || "creationTime desc" })}`); }),
                 columns: [
-                    { title: "İşlemler", rowAction: { items: [rowUpdateItem(function (d) { return `${api.order}/${d.record.id}`; }, function (d, payload) { return apiPut(`${api.order}/${d.record.id}`, payload); }, "Sipariş Güncelle"), { text: "İptal", action: function (d) { return apiPost(`${api.order}/${d.record.id}/cancel?reason=Admin`, {}); } }] } },
-                    { title: "Sipariş No", data: "orderNumber" }, { title: "Öğrenci", data: "studentId" }, { title: "Eğitmen", data: "trainerProfileId" }, { title: "Tutar", data: "netAmount" }, { title: "Durum", data: "status", render: function (v) { return enumText("status", v); } }, { title: "Ödeme", data: "paymentStatus", render: function (v) { return enumText("paymentStatus", v); } }
+                    { title: "İşlemler", rowAction: { items: [rowUpdateItem(function (d) { return `${api.order}/${d.record.id}`; }, function (d, payload) { return apiPut(`${api.order}/${d.record.id}`, payload); }, "Sipariş Güncelle")] } },
+                    { title: "Sipariş No", data: "orderNumber" }, { title: "Öğrenci", data: "studentFullName", render: function (v, t, r) { return safe(v) || safe(r.studentId); } }, { title: "Eğitmen", data: "trainerFullName", render: function (v, t, r) { return safe(v) || safe(r.trainerProfileId); } }, { title: "Tutar", data: "netAmount" }, { title: "Durum", data: "status", render: function (v) { return enumText("status", v); } }, { title: "Ödeme", data: "paymentStatus", render: function (v) { return enumText("paymentStatus", v); } }
                 ]
             };
         }
         if (module === "trainers") {
             return {
-                ajax: function (input) { return apiGet(`${api.trainer}?${qs(input, { sorting: input.sorting || "creationTime desc" })}`); },
+                ajax: pagedAjax(function (input) { return apiGet(`${api.trainer}?${qs(input, { sorting: input.sorting || "creationTime desc" })}`); }),
                 columns: [
-                    { title: "İşlemler", rowAction: { items: [rowUpdateItem(function (d) { return `${api.trainer}/${d.record.id}`; }, function (d, payload) { return apiPut(`${api.trainer}/${d.record.id}`, payload); }, "Eğitmen Profili Güncelle")] } },
-                    { title: "Kullanıcı", data: "userId" }, { title: "Slug", data: "slug" }, { title: "Şehir", data: "city" }, { title: "Puan", data: "averageRating" }, { title: "Aktif", data: "isActive", render: function (v) { return v ? "Evet" : "Hayır"; } }
+                    { title: "İşlemler", rowAction: { items: [rowUpdateItem(function (d) { return `${api.trainer}/${d.record.id}`; }, function (d, payload) { return apiPut(`${api.trainer}/${d.record.id}`, payload); }, "Eğitmen Profili Güncelle"), rowDeleteItem(function (d) { return apiDelete(`${api.trainer}/${d.record.id}`); }, "Eğitmen profili silinsin mi?")] } },
+                    { title: "Kullanıcı", data: "trainerFullName", render: function (v, t, r) { return safe(v) || safe(r.userId); } }, { title: "Slug", data: "slug" }, { title: "Şehir", data: "city" }, { title: "Puan", data: "averageRating" }, { title: "Aktif", data: "isActive", render: function (v) { return v ? "Evet" : "Hayır"; } }
                 ]
             };
         }
         if (module === "packages") {
             return {
-                ajax: function (input) { return apiGet(`${api.package}?${qs(input, { sorting: input.sorting || "creationTime desc" })}`); },
+                ajax: pagedAjax(function (input) { return apiGet(`${api.package}?${qs(input, { sorting: input.sorting || "creationTime desc" })}`); }),
                 columns: [
-                    { title: "İşlemler", rowAction: { items: [rowUpdateItem(function (d) { return `${api.package}/${d.record.id}`; }, function (d, payload) { return apiPut(`${api.package}/${d.record.id}`, payload); }, "Paket Güncelle")] } },
-                    { title: "Başlık", data: "title" }, { title: "Eğitmen", data: "trainerProfileId" }, { title: "Tip", data: "packageType" }, { title: "Fiyat", data: "price" }, { title: "Aktif", data: "isActive", render: function (v) { return v ? "Evet" : "Hayır"; } }
+                    { title: "İşlemler", rowAction: { items: [rowUpdateItem(function (d) { return `${api.package}/${d.record.id}`; }, function (d, payload) { return apiPut(`${api.package}/${d.record.id}`, payload); }, "Paket Güncelle"), rowDeleteItem(function (d) { return apiDelete(`${api.package}/${d.record.id}`); }, "Paket silinsin mi?")] } },
+                    { title: "Başlık", data: "title" }, { title: "Eğitmen", data: "trainerFullName", render: function (v, t, r) { return safe(v) || safe(r.trainerProfileId); } }, { title: "Tip", data: "packageType" }, { title: "Fiyat", data: "price" }, { title: "Aktif", data: "isActive", render: function (v) { return v ? "Evet" : "Hayır"; } }
                 ]
             };
         }
         if (module === "categories") {
             return {
-                ajax: function (input) { return apiGet(`${api.category}?${qs(input, {})}`); },
+                ajax: pagedAjax(function (input) { return apiGet(`${api.category}?${qs(input, {})}`); }),
                 columns: [
-                    { title: "İşlemler", rowAction: { items: [rowUpdateItem(function (d) { return `${api.category}/${d.record.id}`; }, function (d, payload) { return apiPut(`${api.category}/${d.record.id}`, payload); }, "Kategori Güncelle")] } },
-                    { title: "Ad", data: "name" }, { title: "Slug", data: "slug" }, { title: "Parent", data: "parentId" }, { title: "Sıra", data: "sortOrder" }
+                    { title: "İşlemler", rowAction: { items: [rowUpdateItem(function (d) { return `${api.category}/${d.record.id}`; }, function (d, payload) { return apiPut(`${api.category}/${d.record.id}`, payload); }, "Kategori Güncelle"), rowDeleteItem(function (d) { return apiDelete(`${api.category}/${d.record.id}`); }, "Kategori silinsin mi?")] } },
+                    { title: "Ad", data: "name" }, { title: "Slug", data: "slug" }, { title: "Üst Kategori", data: "parentCategoryName", render: function (v, t, r) { return safe(v) || safe(r.parentId); } }, { title: "Sıra", data: "sortOrder" }
                 ]
             };
         }
         if (module === "subscriptions") {
             return {
-                ajax: function (input) { return apiGet(`${api.subscription}/plans?${qs(input, {})}`); },
+                ajax: pagedAjax(function (input) { return apiGet(`${api.subscription}/plans?${qs(input, {})}`); }),
                 columns: [
-                    { title: "İşlemler", rowAction: { items: [rowUpdateItem(function (d) { return `${api.subscription}/plans/${d.record.id}`; }, function (d, payload) { return apiPut(`${api.subscription}/${d.record.id}/plan`, payload); }, "Abonelik Planı Güncelle")] } },
+                    { title: "İşlemler", rowAction: { items: [rowUpdateItem(function (d) { return `${api.subscription}/plans/${d.record.id}`; }, function (d, payload) { return apiPut(`${api.subscription}/${d.record.id}/plan`, payload); }, "Abonelik Planı Güncelle"), rowDeleteItem(function (d) { return apiDelete(`${api.subscription}/${d.record.id}/plan`); }, "Abonelik planı silinsin mi?")] } },
                     { title: "Ad", data: "name" }, { title: "Tier", data: "tier" }, { title: "Tip", data: "planType", render: function (v) { return enumText("planType", v); } }, { title: "Fiyat", data: "price" }, { title: "Komisyon", data: "commissionRate" }
                 ]
             };
         }
         if (module === "reviews") {
             return {
-                ajax: function (input) { return apiGet(`${api.review}/by-trainer?${qs(input, { sorting: input.sorting || "creationTime desc" })}`); },
+                ajax: pagedAjax(function (input) { return apiGet(`${api.review}/by-trainer?${qs(input, { sorting: input.sorting || "creationTime desc" })}`); }),
                 columns: [
-                    { title: "İşlemler", rowAction: { items: [rowUpdateItem(function (d) { return `${api.review}/${d.record.id}`; }, function (d, payload) { return apiPut(`${api.review}/${d.record.id}`, payload); }, "Yorum Güncelle")] } },
-                    { title: "Sipariş", data: "orderId" }, { title: "Öğrenci", data: "studentId" }, { title: "Eğitmen", data: "trainerProfileId" }, { title: "Puan", data: "rating" }, { title: "Yorum", data: "comment" }
+                    { title: "İşlemler", rowAction: { items: [rowUpdateItem(function (d) { return `${api.review}/${d.record.id}`; }, function (d, payload) { return apiPut(`${api.review}/${d.record.id}`, payload); }, "Yorum Güncelle"), rowDeleteItem(function (d) { return apiDelete(`${api.review}/${d.record.id}`); }, "Yorum silinsin mi?")] } },
+                    { title: "Sipariş", data: "orderId" }, { title: "Öğrenci", data: "studentFullName", render: function (v, t, r) { return safe(v) || safe(r.studentId); } }, { title: "Eğitmen", data: "trainerFullName", render: function (v, t, r) { return safe(v) || safe(r.trainerProfileId); } }, { title: "Puan", data: "rating" }, { title: "Yorum", data: "comment" }
                 ]
             };
         }
         if (module === "notifications") {
             return {
-                ajax: function (input) { return apiGet(`${api.notification}?${qs(input, {})}`); },
+                ajax: pagedAjax(function (input) { return apiGet(`${api.notification}?${qs(input, {})}`); }),
                 columns: [
                     { title: "İşlemler", rowAction: { items: [rowUpdateItem(function (d) { return `${api.notification}/${d.record.id}`; }, function (d, payload) { return apiPut(`${api.notification}/${d.record.id}`, payload); }, "Bildirim Güncelle")] } },
-                    { title: "Kullanıcı", data: "userId" }, { title: "Tip", data: "notificationType", render: function (v) { return enumText("notificationType", v); } }, { title: "Başlık", data: "title" }, { title: "Okundu", data: "isRead", render: function (v) { return v ? "Evet" : "Hayır"; } }, { title: "Tarih", data: "creationTime" }
+                    { title: "Kullanıcı", data: "userFullName", render: function (v, t, r) { return safe(v) || safe(r.userId); } }, { title: "Tip", data: "notificationType", render: function (v) { return enumText("notificationType", v); } }, { title: "Başlık", data: "title" }, { title: "Okundu", data: "isRead", render: function (v) { return v ? "Evet" : "Hayır"; } }, { title: "Tarih", data: "creationTime" }
                 ]
             };
         }
         if (module === "support") {
             return {
-                ajax: function (input) { return apiGet(`${api.support}?${qs(input, { sorting: input.sorting || "creationTime desc" })}`); },
+                ajax: pagedAjax(function (input) { return apiGet(`${api.support}?${qs(input, { sorting: input.sorting || "creationTime desc" })}`); }),
                 columns: [
                     { title: "İşlemler", rowAction: { items: [rowUpdateItem(function (d) { return `${api.support}/${d.record.id}`; }, function (d, payload) { return apiPut(`${api.support}/${d.record.id}`, payload); }, "Destek Talebi Güncelle")] } },
-                    { title: "Konu", data: "subject" }, { title: "Kategori", data: "category", render: function (v) { return enumText("category", v); } }, { title: "Durum", data: "status", render: function (v) { return enumText("status", v); } }, { title: "Öncelik", data: "priority", render: function (v) { return enumText("priority", v); } }, { title: "Kullanıcı", data: "userId" }
+                    { title: "Konu", data: "subject" }, { title: "Kategori", data: "category", render: function (v) { return enumText("category", v); } }, { title: "Durum", data: "status", render: function (v) { return enumText("status", v); } }, { title: "Öncelik", data: "priority", render: function (v) { return enumText("priority", v); } }, { title: "Kullanıcı", data: "userFullName", render: function (v, t, r) { return safe(v) || safe(r.userId); } }
                 ]
             };
         }
         if (module === "disputes") {
             return {
-                ajax: function (input) { return apiGet(`${api.dispute}?${qs(input, { sorting: input.sorting || "creationTime desc" })}`); },
+                ajax: pagedAjax(function (input) { return apiGet(`${api.dispute}?${qs(input, { sorting: input.sorting || "creationTime desc" })}`); }),
                 columns: [
                     { title: "İşlemler", rowAction: { items: [rowUpdateItem(function (d) { return `${api.dispute}/${d.record.id}`; }, function (d, payload) { return apiPut(`${api.dispute}/${d.record.id}`, payload); }, "Uyuşmazlık Güncelle")] } },
                     { title: "Tip", data: "disputeType", render: function (v) { return enumText("disputeType", v); } }, { title: "Sipariş", data: "orderId" }, { title: "Durum", data: "status", render: function (v) { return enumText("status", v); } }, { title: "Açıklama", data: "description" }
@@ -273,7 +373,7 @@ $(function () {
         }
         if (module === "withdrawals") {
             return {
-                ajax: function (input) { return apiGet(`${api.withdrawal}?${qs(input, { sorting: input.sorting || "creationTime desc" })}`); },
+                ajax: pagedAjax(function (input) { return apiGet(`${api.withdrawal}?${qs(input, { sorting: input.sorting || "creationTime desc" })}`); }),
                 columns: [
                     { title: "İşlemler", rowAction: { items: [rowUpdateItem(function (d) { return `${api.withdrawal}/${d.record.id}`; }, function (d, payload) { return apiPut(`${api.withdrawal}/${d.record.id}`, payload); }, "Para Çekme Talebi Güncelle")] } },
                     { title: "Tutar", data: "amount" }, { title: "Hesap", data: "accountHolderName" }, { title: "IBAN", data: "iban" }, { title: "Durum", data: "status", render: function (v) { return enumText("status", v); } }, { title: "Not", data: "adminNote" }
@@ -282,18 +382,18 @@ $(function () {
         }
         if (module === "featured") {
             return {
-                ajax: function (input) { return apiGet(`${api.featured}?${qs(input, { sorting: input.sorting || "sortOrder" })}`); },
+                ajax: pagedAjax(function (input) { return apiGet(`${api.featured}?${qs(input, { sorting: input.sorting || "sortOrder" })}`); }),
                 columns: [
-                    { title: "İşlemler", rowAction: { items: [rowUpdateItem(function (d) { return `${api.featured}/${d.record.id}`; }, function (d, payload) { return apiPut(`${api.featured}/${d.record.id}`, payload); }, "Öne Çıkan Kayıt Güncelle")] } },
+                    { title: "İşlemler", rowAction: { items: [rowUpdateItem(function (d) { return `${api.featured}/${d.record.id}`; }, function (d, payload) { return apiPut(`${api.featured}/${d.record.id}`, payload); }, "Öne Çıkan Kayıt Güncelle"), rowDeleteItem(function (d) { return apiDelete(`${api.featured}/${d.record.id}`); }, "Öne çıkan kayıt silinsin mi?")] } },
                     { title: "Tip", data: "pageType", render: function (v) { return enumText("pageType", v); } }, { title: "Eğitmen", data: "trainerProfileId" }, { title: "Paket", data: "servicePackageId" }, { title: "Sıra", data: "sortOrder" }, { title: "Durum", data: "isActive", render: function (v) { return v ? "Aktif" : "Pasif"; } }
                 ]
             };
         }
         if (module === "blog") {
             return {
-                ajax: function (input) { return apiGet(`${api.blog}?${qs(input, { sorting: input.sorting || "creationTime desc" })}`); },
+                ajax: pagedAjax(function (input) { return apiGet(`${api.blog}?${qs(input, { sorting: input.sorting || "creationTime desc" })}`); }),
                 columns: [
-                    { title: "İşlemler", rowAction: { items: [rowUpdateItem(function (d) { return `${api.blog}/${d.record.id}`; }, function (d, payload) { return apiPut(`${api.blog}/${d.record.id}`, payload); }, "Blog Yazısı Güncelle")] } },
+                    { title: "İşlemler", rowAction: { items: [rowUpdateItem(function (d) { return `${api.blog}/${d.record.id}`; }, function (d, payload) { return apiPut(`${api.blog}/${d.record.id}`, payload); }, "Blog Yazısı Güncelle"), rowDeleteItem(function (d) { return apiDelete(`${api.blog}/${d.record.id}`); }, "Blog yazısı silinsin mi?")] } },
                     { title: "Başlık", data: "title" }, { title: "Slug", data: "slug" }, { title: "Durum", data: "status", render: function (v) { return enumText("status", v); } }, { title: "Yayın Tarihi", data: "publishedAt" }
                 ]
             };
@@ -318,9 +418,13 @@ $(function () {
             processing: true,
             serverSide: true,
             paging: true,
+            pageLength: 10,
+            lengthMenu: [10, 25, 50, 100],
+            pagingType: "full_numbers",
+            lengthChange: true,
             searching: false,
             scrollX: true,
-            order: [],
+            order: [[1, "asc"]],
             ajax: abp.libs.datatables.createAjax(config.ajax),
             columnDefs: config.columns
         })

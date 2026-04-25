@@ -28,6 +28,7 @@ public class OrderDto : EntityDto<Guid>
     public DateTime CreationTime { get; set; }
 
     public string? TrainerFullName { get; set; }
+    public string? StudentFullName { get; set; }
     public string? PackageTitle { get; set; }
 
     /// <summary>

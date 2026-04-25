@@ -16,4 +16,5 @@ public class ReviewDto : EntityDto<Guid>
     public DateTime CreationTime { get; set; }
 
     public string? StudentFullName { get; set; }
+    public string? TrainerFullName { get; set; }
 }

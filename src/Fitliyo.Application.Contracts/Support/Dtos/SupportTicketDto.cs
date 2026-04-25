@@ -17,4 +17,5 @@ public class SupportTicketDto : EntityDto<Guid>
     public DateTime? AdminReplyDate { get; set; }
     public Guid? AssignedToUserId { get; set; }
     public DateTime CreationTime { get; set; }
+    public string? UserFullName { get; set; }
 }
