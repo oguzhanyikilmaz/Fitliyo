@@ -1,0 +1,52 @@
+---
+description: Fitliyo Next.js frontend — Swagger tek kaynak, API, auth, UI
+globs: frontend/**
+alwaysApply: false
+---
+
+# Fitliyo Frontend (Next.js 14 / App Router)
+
+## Tek doğruluk kaynağı
+
+- **API sözleşmesi:** Backend repo `docs/openapi/swagger.web.v1.full.json` — **tahmin yok**; yeni route veya DTO eklendikten sonra bu dosya yenilenir, frontend path/DTO buna göre güncellenir.
+- Path üretmek için önce Swagger’da tam URL’yi doğrula (kebab-case: `/api/app/user-profile/my-profile` gibi). Eski `PascalCase` `.../Controller/Action` kalıntıları **hatalı olabilir**.
+
+## Kodlama disiplini
+
+- Tüm `fetch` çağrıları `frontend/lib/api.ts` → `apiFetch` üzerinden; **Authorization** ve **401/403** (oturum temizleme + `/login?redirect=`) merkezî.
+- API path’leri `frontend/lib/api-paths.ts` içinde; yeni endpoint → önce Swagger, sonra burada sabit.
+- DTO tipleri `frontend/lib/types.ts` — alan isimleri backend ile uyumlu; **swagger’daki `components/schemas`** referans.
+- **P12:** Listelerde `skipCount` + `maxResultCount` (ör. `DEFAULT_LIST_PARAMS`); tüm tabloyu tek istekle çekme.
+
+## Auth ve oturum
+
+- Giriş: `POST {API}/connect/token` (OAuth password grant) — `client_id` = `NEXT_PUBLIC_OAUTH_CLIENT_ID` (varsayılan `Fitliyo_App`); `scope` = `Fitliyo openid profile` (backend ile aynı).
+- Token: `localStorage` `fitliyo_token`; kullanıcı özeti `fitliyo_user`. **JWT `exp`** `lib/auth.ts` içinde kontrol; süresi dolmuşsa `isAuthenticated()` false, API çağrısı öncesi yönlendirme.
+- Roller: JWT içinde `role` ve/veya `http://schemas.microsoft.com/.../claims/role` — `getRolesFromToken` / `getRolesFromTokenPayload` dizi destekli.
+- **CORS + credentials:** Backend `App:CorsOrigins` içinde frontend origin; cookie ile çalışmıyoruz, **Bearer** kullanıyoruz.
+
+## Ortam değişkenleri
+
+- `NEXT_PUBLIC_API_URL` — API kökü (örn. `http://localhost:5001`)
+- `NEXT_PUBLIC_OAUTH_CLIENT_ID` — OpenIddict public client (varsayılan `Fitliyo_App`)
+
+## UI / tasarım
+
+- **Tema:** Minimal, modern; **yuvarlatılmış** köşeler: `rounded-apple`, `rounded-apple-lg`, `rounded-full` butonlar; gölgeler `shadow-apple`.
+- Stil: Tailwind; tasarım token’ları `tailwind.config.ts` + `app/globals.css` (`.card-apple`, `.btn-apple-primary`).
+- Yeni sayfalar: mobil önce, tutarlı boşluk (`space-y-8` / `gap-6`), form etiketleri erişilebilir (`label` + `htmlFor`).
+
+## Profil (öğrenci) — referans
+
+- **GET/PUT** `/api/app/user-profile/my-profile` — bkz. `UserHealthProfile` + `ApiPaths.UserProfile.myProfile()`.
+
+## Dokümantasyon
+
+- Önemli frontend davranış değişikliği: backend `docs/frontend-changes/` (Next.js tüketici) + backend `docs/CHANGELOG.md` ile uyum; bu dosya sadece **repo içi** frontend kuralıdır.
+
+## Yasak
+
+- Swagger’da olmayan path’e `fetch` yazmak
+- `apiFetch` dışında raw `fetch` ile aynı API’ye tekrarlayan yetkilendirme katmanı kurmak
+- `Thread.sleep` / token süresi umursanmadan “sessizce” 401 yutmak
+- Hassas değerleri (şifre, token) `console.log` veya hata mesajında göstermek

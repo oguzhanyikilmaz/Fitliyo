@@ -1,33 +1,40 @@
 # Fitliyo Web Frontend
 
-Rol bazlı (Öğrenci / Eğitmen / Admin) Fitliyo marketplace arayüzü. Next.js 14, TypeScript, Tailwind CSS.
+Rol bazlı (Öğrenci / Eğitmen / Admin) marketplace arayüzü. Next.js 14, TypeScript, Tailwind CSS.
+
+## API sözleşmesi (zorunlu)
+
+- Tek kaynak: backend repo `docs/openapi/swagger.web.v1.full.json`
+- Yeni endpoint veya DTO: önce Swagger, sonra `lib/api-paths.ts` + `lib/types.ts` + ekran.
+- Geliştirme kuralları: [`.cursor/rules/frontend-fitliyo.mdc`](../.cursor/rules/frontend-fitliyo.mdc)
 
 ## Gereksinimler
 
 - Node.js 20+
-- Backend (Fitliyo.Web) çalışır durumda ve CORS’ta frontend origin’e izin veriyor olmalı
+- Backend (Fitliyo.Web) çalışır; CORS’ta `http://localhost:3000` (veya kendi origin’iniz) tanımlı olmalı
 
 ## Kurulum
 
 ```bash
 cd frontend
 cp .env.example .env.local
-# .env.local içinde NEXT_PUBLIC_API_URL'yi backend adresine göre ayarla (örn. http://localhost:5000)
+# NEXT_PUBLIC_API_URL = backend kökü (örn. http://localhost:5001)
+# NEXT_PUBLIC_OAUTH_CLIENT_ID = OpenIddict public client (genelde Fitliyo_App)
 npm install
 npm run dev
 ```
 
-Tarayıcıda: [http://localhost:3000](http://localhost:3000)
+[http://localhost:3000](http://localhost:3000)
 
-## Rol ve Sayfalar
+## Rotalar (özet)
 
-- **Misafir:** `/`, `/egitmenler`, `/giris`, `/kayit`
-- **Öğrenci:** `/ogrenci` (dashboard), siparişler, seanslar, bildirimler, destek
-- **Eğitmen:** `/egitmen` (dashboard), profil, paketler, siparişler, cüzdan, para çekme
-- **Admin:** `/admin` (dashboard), destek, uyuşmazlıklar, öne çıkanlar, blog, para çekme
+- **Giriş / kayıt:** `/login`, `/register`
+- **Öğrenci:** `/student`, `/student/profile`, siparişler, seanslar, …
+- **Eğitmen:** `/trainer`, …
+- **Admin:** `/admin`, …
 
-Giriş sonrası rol bilgisi token’dan alınır; Öğrenci → `/ogrenci`, Eğitmen → `/egitmen`, Admin/SuperAdmin → `/admin` yönlendirilir.
+Giriş sonrası yönlendirme JWT rol claim’lerine göre (Student → `/student`, Trainer → `/trainer`, Admin → `/admin`).
 
 ## Plan
 
-Detaylı sayfa listesi ve API eşlemesi: [docs/FRONTEND_PLANI.md](../docs/FRONTEND_PLANI.md)
+[docs/FRONTEND_PLANI.md](../docs/FRONTEND_PLANI.md) (varsa)

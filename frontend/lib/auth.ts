@@ -2,6 +2,8 @@
 
 const TOKEN_KEY = "fitliyo_token";
 const USER_KEY = "fitliyo_user";
+/** Saniye cinsinden; JWT exp ile karşılaştırmada saat kayması için tampon */
+const EXPIRY_SKEW_SEC = 45;
 
 export interface StoredUser {
   id?: string;
@@ -9,28 +11,9 @@ export interface StoredUser {
   roles: string[];
 }
 
-function getToken(): string | null {
+export function getAccessToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem(TOKEN_KEY);
-}
-
-export function setAuth(accessToken: string, opts: { roles?: string[] } = {}) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(TOKEN_KEY, accessToken);
-  const payload = parseJwtPayload(accessToken);
-  const sub = payload?.sub as string | undefined;
-  const name = (payload?.name ?? payload?.unique_name) as string | undefined;
-  const roles = opts.roles ?? (payload?.role ? [payload.role] : []) as string[];
-  const arr = payload?.["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
-  const roleList = Array.isArray(arr) ? arr : arr ? [arr] : roles;
-  localStorage.setItem(
-    USER_KEY,
-    JSON.stringify({
-      id: sub,
-      userName: name ?? sub,
-      roles: roleList.length ? roleList : roles,
-    })
-  );
 }
 
 function parseJwtPayload(token: string): Record<string, unknown> | null {
@@ -51,20 +34,72 @@ function parseJwtPayload(token: string): Record<string, unknown> | null {
   }
 }
 
+/** JWT exp (Unix saniye) varsa ve süresi dolmuşsa false */
+export function isAccessTokenValid(): boolean {
+  const token = getAccessToken();
+  if (!token) return false;
+  const payload = parseJwtPayload(token);
+  const exp = payload?.exp;
+  if (exp === undefined || exp === null) return true;
+  const expNum = typeof exp === "number" ? exp : Number(exp);
+  if (Number.isNaN(expNum)) return true;
+  return Math.floor(Date.now() / 1000) < expNum - EXPIRY_SKEW_SEC;
+}
+
+const ROLE_CLAIM = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
+
+/** ABP / OpenIddict JWT rol claim'lerini dizi yapar (tekil veya çoklu) */
+export function getRolesFromTokenPayload(payload: Record<string, unknown> | null): string[] {
+  if (!payload) return [];
+  const fromUri = payload[ROLE_CLAIM];
+  if (Array.isArray(fromUri)) return fromUri.map(String);
+  if (typeof fromUri === "string" && fromUri) return [fromUri];
+
+  const r = payload.role;
+  if (Array.isArray(r)) return r.map(String);
+  if (typeof r === "string" && r) return [r];
+  if (r != null) return [String(r)];
+
+  return [];
+}
+
+export function getRolesFromToken(token: string): string[] {
+  return getRolesFromTokenPayload(parseJwtPayload(token));
+}
+
+export function setAuth(accessToken: string, opts: { roles?: string[] } = {}) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(TOKEN_KEY, accessToken);
+  const payload = parseJwtPayload(accessToken);
+  const sub = payload?.sub as string | undefined;
+  const name = (payload?.name ?? payload?.unique_name) as string | undefined;
+  const fromJwt = getRolesFromTokenPayload(payload);
+  const roleList = fromJwt.length ? fromJwt : opts.roles ?? [];
+  localStorage.setItem(
+    USER_KEY,
+    JSON.stringify({
+      id: sub,
+      userName: name ?? sub,
+      roles: roleList,
+    })
+  );
+}
+
 export function getStoredUser(): StoredUser | null {
   if (typeof window === "undefined") return null;
   const raw = localStorage.getItem(USER_KEY);
   if (!raw) {
-    const token = getToken();
-    if (token) {
-      const payload = parseJwtPayload(token);
-      const sub = payload?.sub as string | undefined;
-      const name = (payload?.name ?? payload?.unique_name) as string | undefined;
-      const arr = payload?.["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
-      const roles = (Array.isArray(arr) ? arr : arr ? [arr] : []) as string[];
-      return { id: sub, userName: name ?? sub, roles };
-    }
-    return null;
+    const token = getAccessToken();
+    if (!token) return null;
+    if (!isAccessTokenValid()) return null;
+    const payload = parseJwtPayload(token);
+    const sub = payload?.sub as string | undefined;
+    const name = (payload?.name ?? payload?.unique_name) as string | undefined;
+    return {
+      id: sub,
+      userName: name ?? sub,
+      roles: getRolesFromTokenPayload(payload),
+    };
   }
   try {
     return JSON.parse(raw) as StoredUser;
@@ -80,15 +115,7 @@ export function clearAuth() {
 }
 
 export function isAuthenticated(): boolean {
-  return !!getToken();
-}
-
-export function getRolesFromToken(token: string): string[] {
-  const payload = parseJwtPayload(token);
-  const arr = payload?.["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
-  if (Array.isArray(arr)) return arr as string[];
-  if (arr) return [arr as string];
-  return (payload?.role ? [payload.role as string] : []);
+  return !!getAccessToken() && isAccessTokenValid();
 }
 
 export function getDashboardPathForRole(roles: string[]): string {

@@ -36,15 +36,28 @@ export default function OgrenciDashboardPage() {
     };
     const query = buildQuery(params as Record<string, string | number | boolean | undefined | null>);
     apiFetch<PagedResultDto<OrderDto>>(ApiPaths.Order.getMyOrdersAsync(query))
-      .then((res) => {
-        setOrders(res.items ?? []);
-        const firstOrder = res.items?.[0];
-        if (firstOrder?.id) {
-          return apiFetch<PagedResultDto<SessionDto>>(ApiPaths.Order.getSessionsAsync(firstOrder.id));
+      .then(async (res) => {
+        const list = res.items ?? [];
+        setOrders(list);
+        if (list.length === 0) {
+          return [] as SessionDto[];
         }
-        return { items: [] as SessionDto[] };
+        const byOrder = await Promise.all(
+          list.map((o) =>
+            apiFetch<PagedResultDto<SessionDto>>(ApiPaths.Order.getSessionsAsync(o.id)).catch(() => ({
+              items: [] as SessionDto[],
+              totalCount: 0,
+            }))
+          )
+        );
+        return byOrder.flatMap((r) => r.items ?? []);
       })
-      .then((res) => setSessions(res.items ?? []))
+      .then((allSessions) => {
+        allSessions.sort(
+          (a, b) => new Date(a.scheduledStartTime).getTime() - new Date(b.scheduledStartTime).getTime()
+        );
+        setSessions(allSessions);
+      })
       .catch((e) => setError(e instanceof Error ? e.message : "Veri yüklenemedi"))
       .finally(() => setLoading(false));
   }, []);

@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Fitliyo.Enums;
 using Fitliyo.Profiles.Dtos;
 using Fitliyo;
+using Fitliyo.Wellness;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
@@ -101,6 +102,20 @@ public class UserProfileAppService : FitliyoAppService, IUserProfileAppService
             (dto.Gender == Gender.Male || (dto.Gender == Gender.Female && dto.HipCm.HasValue)))
         {
             dto.BodyFatPercentage = CalculateBodyFatNavy(dto.Gender, dto.HeightCm.Value, dto.WaistCm.Value, dto.NeckCm.Value, dto.HipCm);
+        }
+
+        if (dto.Bmi.HasValue)
+        {
+            var cat = WellnessMetabolicMath.BmiToCategory(dto.Bmi.Value);
+            dto.BmiCategory = cat;
+            dto.BmiCategoryDescription = WellnessMetabolicMath.GetBmiCategoryDescriptionTr(cat);
+            dto.IsObese = WellnessMetabolicMath.IsObese(cat);
+        }
+        else
+        {
+            dto.BmiCategory = BmiCategory.Unknown;
+            dto.BmiCategoryDescription = WellnessMetabolicMath.GetBmiCategoryDescriptionTr(BmiCategory.Unknown);
+            dto.IsObese = null;
         }
     }
 

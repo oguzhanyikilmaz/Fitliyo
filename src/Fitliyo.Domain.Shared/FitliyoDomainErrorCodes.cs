@@ -139,6 +139,32 @@ public static class FitliyoDomainErrorCodes
     /// <summary>Kullanıcı giriş yapmamış</summary>
     public const string UserNotLoggedIn = "Fitliyo:Profile:00001";
 
+    /* Wellness */
+
+    /// <summary>Antrenman programı bulunamadı</summary>
+    public const string WorkoutProgramNotFound = "Fitliyo:Wellness:00001";
+
+    /// <summary>Antrenman günlüğü bulunamadı</summary>
+    public const string WorkoutLogNotFound = "Fitliyo:Wellness:00002";
+
+    /// <summary>Beslenme planı bulunamadı</summary>
+    public const string NutritionPlanNotFound = "Fitliyo:Wellness:00003";
+
+    /// <summary>Kullanıcı gıda kaydı bulunamadı</summary>
+    public const string UserFoodItemNotFound = "Fitliyo:Wellness:00004";
+
+    /// <summary>Günlük öğün kaydı bulunamadı</summary>
+    public const string DailyMealLogNotFound = "Fitliyo:Wellness:00005";
+
+    /// <summary>Öğün satırı bulunamadı</summary>
+    public const string MealLogEntryNotFound = "Fitliyo:Wellness:00006";
+
+    /// <summary>Antrenman kcal hesabı için profil kilosu gerekli</summary>
+    public const string UserWeightRequiredForWorkoutKcal = "Fitliyo:Wellness:00007";
+
+    /// <summary>Manuel öğün: ad ve 100g kcal zorunlu</summary>
+    public const string MealLogManualInputInvalid = "Fitliyo:Wellness:00008";
+
     /* Genel */
 
     /// <summary>Kayıt bulunamadı</summary>

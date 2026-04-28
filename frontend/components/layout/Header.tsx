@@ -2,11 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { getStoredUser, clearAuth, getDashboardPathForRole } from "@/lib/auth";
+import { useEffect, useState } from "react";
+import {
+  getStoredUser,
+  clearAuth,
+  getDashboardPathForRole,
+  isAuthenticated,
+} from "@/lib/auth";
+import type { StoredUser } from "@/lib/auth";
 
 export default function Header() {
   const pathname = usePathname();
-  const user = getStoredUser();
+  const [user, setUser] = useState<StoredUser | null>(null);
+
+  useEffect(() => {
+    setUser(isAuthenticated() ? getStoredUser() : null);
+  }, [pathname]);
 
   const handleLogout = () => {
     clearAuth();
@@ -25,9 +36,15 @@ export default function Header() {
         <nav className="flex items-center gap-6">
           <Link
             href="/trainers"
-            className={`text-apple-body font-normal ${pathname === "/trainers" ? "text-apple-black" : "text-apple-gray hover:text-apple-black"}`}
+            className={`text-apple-body font-normal ${pathname === "/trainers" || pathname?.startsWith("/trainers/") ? "text-apple-black" : "text-apple-gray hover:text-apple-black"}`}
           >
             Eğitmenler
+          </Link>
+          <Link
+            href="/packages"
+            className={`text-apple-body font-normal ${pathname === "/packages" ? "text-apple-black" : "text-apple-gray hover:text-apple-black"}`}
+          >
+            Paketler
           </Link>
           {!user ? (
             <>

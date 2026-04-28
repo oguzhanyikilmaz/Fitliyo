@@ -11,6 +11,7 @@ using Fitliyo.Subscriptions;
 using Fitliyo.Support;
 using Fitliyo.Trainers;
 using Fitliyo.Profiles;
+using Fitliyo.Wellness;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp;
 using Volo.Abp.EntityFrameworkCore.Modeling;
@@ -552,6 +553,120 @@ public static class FitliyoDbContextModelCreatingExtensions
             b.HasIndex(x => x.Slug).IsUnique();
             b.HasIndex(x => x.Status);
             b.HasIndex(x => x.PublishedAt);
+        });
+
+        /* UserNotificationPreferences */
+        builder.Entity<UserNotificationPreferences>(b =>
+        {
+            b.ToTable(FitliyoConsts.DbTablePrefix + "UserNotificationPreferences", FitliyoConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.HasIndex(x => x.UserId).IsUnique();
+        });
+
+        /* PersonalWorkoutProgram */
+        builder.Entity<PersonalWorkoutProgram>(b =>
+        {
+            b.ToTable(FitliyoConsts.DbTablePrefix + "PersonalWorkoutPrograms", FitliyoConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.Title).IsRequired().HasMaxLength(WellnessConsts.MaxTitleLength);
+            b.Property(x => x.Description).HasMaxLength(WellnessConsts.MaxDescriptionLength);
+            b.HasIndex(x => x.UserId);
+            b.HasIndex(x => x.IsArchived);
+        });
+
+        /* PersonalWorkoutTemplateExercise */
+        builder.Entity<PersonalWorkoutTemplateExercise>(b =>
+        {
+            b.ToTable(FitliyoConsts.DbTablePrefix + "PersonalWorkoutTemplateExercises", FitliyoConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.Name).IsRequired().HasMaxLength(WellnessConsts.MaxExerciseNameLength);
+            b.Property(x => x.Notes).HasMaxLength(WellnessConsts.MaxTemplateExerciseNoteLength);
+            b.Property(x => x.DefaultMet).HasPrecision(6, 2);
+            b.HasIndex(x => x.PersonalWorkoutProgramId);
+            b.HasOne<PersonalWorkoutProgram>().WithMany().HasForeignKey(x => x.PersonalWorkoutProgramId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        /* UserWorkoutLog */
+        builder.Entity<UserWorkoutLog>(b =>
+        {
+            b.ToTable(FitliyoConsts.DbTablePrefix + "UserWorkoutLogs", FitliyoConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.Notes).HasMaxLength(WellnessConsts.MaxWorkoutNoteLength);
+            b.Property(x => x.TotalCaloriesBurned).HasPrecision(18, 2);
+            b.HasIndex(x => new { x.UserId, x.LogDate });
+            b.HasOne<PersonalWorkoutProgram>().WithMany().HasForeignKey(x => x.PersonalWorkoutProgramId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        /* UserWorkoutLogLine */
+        builder.Entity<UserWorkoutLogLine>(b =>
+        {
+            b.ToTable(FitliyoConsts.DbTablePrefix + "UserWorkoutLogLines", FitliyoConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.ExerciseName).IsRequired().HasMaxLength(WellnessConsts.MaxExerciseNameLength);
+            b.Property(x => x.DurationMinutes).HasPrecision(10, 2);
+            b.Property(x => x.Met).HasPrecision(6, 2);
+            b.Property(x => x.CaloriesBurned).HasPrecision(18, 2);
+            b.HasIndex(x => x.UserWorkoutLogId);
+            b.HasOne<UserWorkoutLog>().WithMany().HasForeignKey(x => x.UserWorkoutLogId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        /* PersonalNutritionPlan */
+        builder.Entity<PersonalNutritionPlan>(b =>
+        {
+            b.ToTable(FitliyoConsts.DbTablePrefix + "PersonalNutritionPlans", FitliyoConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.Title).IsRequired().HasMaxLength(WellnessConsts.MaxTitleLength);
+            b.Property(x => x.Description).HasMaxLength(WellnessConsts.MaxDescriptionLength);
+            b.Property(x => x.DailyCalorieTarget).HasPrecision(12, 2);
+            b.Property(x => x.DailyProteinTargetG).HasPrecision(12, 2);
+            b.Property(x => x.DailyCarbsTargetG).HasPrecision(12, 2);
+            b.Property(x => x.DailyFatTargetG).HasPrecision(12, 2);
+            b.HasIndex(x => x.UserId);
+            b.HasIndex(x => x.IsActive);
+        });
+
+        /* UserFoodItem */
+        builder.Entity<UserFoodItem>(b =>
+        {
+            b.ToTable(FitliyoConsts.DbTablePrefix + "UserFoodItems", FitliyoConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.Name).IsRequired().HasMaxLength(WellnessConsts.MaxFoodNameLength);
+            b.Property(x => x.KcalPer100G).HasPrecision(12, 2);
+            b.Property(x => x.ProteinPer100G).HasPrecision(12, 2);
+            b.Property(x => x.CarbsPer100G).HasPrecision(12, 2);
+            b.Property(x => x.FatPer100G).HasPrecision(12, 2);
+            b.HasIndex(x => x.UserId);
+        });
+
+        /* UserDailyMealLog */
+        builder.Entity<UserDailyMealLog>(b =>
+        {
+            b.ToTable(FitliyoConsts.DbTablePrefix + "UserDailyMealLogs", FitliyoConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.Notes).HasMaxLength(WellnessConsts.MaxWorkoutNoteLength);
+            b.HasIndex(x => new { x.UserId, x.LogDate }).IsUnique();
+        });
+
+        /* UserMealLogEntry */
+        builder.Entity<UserMealLogEntry>(b =>
+        {
+            b.ToTable(FitliyoConsts.DbTablePrefix + "UserMealLogEntries", FitliyoConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.FoodName).HasMaxLength(WellnessConsts.MaxFoodNameLength);
+            b.Property(x => x.PortionGrams).HasPrecision(12, 2);
+            b.Property(x => x.Calories).HasPrecision(12, 2);
+            b.Property(x => x.ProteinG).HasPrecision(12, 2);
+            b.Property(x => x.CarbsG).HasPrecision(12, 2);
+            b.Property(x => x.FatG).HasPrecision(12, 2);
+            b.HasIndex(x => x.UserDailyMealLogId);
+            b.HasIndex(x => x.UserFoodItemId);
+            b.HasOne<UserDailyMealLog>().WithMany().HasForeignKey(x => x.UserDailyMealLogId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne<UserFoodItem>().WithMany().HasForeignKey(x => x.UserFoodItemId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

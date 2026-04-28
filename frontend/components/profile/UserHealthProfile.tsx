@@ -48,7 +48,7 @@ export function UserHealthProfile() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    apiFetch<UserProfileDto>(ApiPaths.UserProfile.getMyProfile())
+    apiFetch<UserProfileDto>(ApiPaths.UserProfile.myProfile())
       .then((p) => setProfile({ ...p, userId: p.userId || "" }))
       .catch((e) => setError(e instanceof Error ? e.message : "Profil yüklenemedi"))
       .finally(() => setLoading(false));
@@ -84,7 +84,7 @@ export function UserHealthProfile() {
       alcoholConsumption: profile.alcoholConsumption || null,
       restingHeartRate: profile.restingHeartRate ?? null,
     };
-    apiFetch<UserProfileDto>(ApiPaths.UserProfile.updateMyProfile(), {
+    apiFetch<UserProfileDto>(ApiPaths.UserProfile.myProfile(), {
       method: "PUT",
       body: JSON.stringify(input),
     })
@@ -118,11 +118,13 @@ export function UserHealthProfile() {
   const labelClass = "block text-apple-body font-medium text-apple-black";
 
   return (
-    <div className="space-y-8">
-      <h1 className="font-display text-apple-title font-semibold text-apple-black">Sağlık ve Profil Bilgilerim</h1>
-      <p className="text-apple-body text-apple-gray">
-        Bu bilgiler bazal metabolizma (BMR), BMI ve günlük kalori ihtiyacı (TDEE) hesaplamalarında kullanılır.
-      </p>
+    <div className="space-y-10">
+      <div className="space-y-2">
+        <h1 className="font-display text-apple-title font-semibold text-apple-black">Sağlık ve profil</h1>
+        <p className="max-w-2xl text-apple-body text-apple-gray">
+          Bilgileriniz BMR, VKİ ve günlük enerji ihtiyacı (TDEE) hesaplarında kullanılır; kayıtlar sunucuyla aynı API sözleşmesi üzerinden senkronize edilir.
+        </p>
+      </div>
 
       {/* Hesaplanan metrikler */}
       {(p.bmi != null || p.bmr != null || p.tdee != null) && (
@@ -136,12 +138,16 @@ export function UserHealthProfile() {
               </div>
             )}
             {p.bmi != null && (
-              <div>
-                <p className="text-apple-body text-apple-gray">BMI (Vücut Kitle İndeksi)</p>
-                <p className="text-xl font-semibold text-apple-black">{p.bmi}</p>
+              <div className="rounded-apple border border-apple-grayLighter/60 bg-apple-bg/80 p-4">
+                <p className="text-apple-body text-apple-gray">BMI (VKİ)</p>
+                <p className="text-xl font-semibold text-apple-black">{p.bmi.toFixed(1)}</p>
                 <p className="text-xs text-apple-grayLight">
-                  {p.bmi < 18.5 ? "Düşük" : p.bmi <= 24.9 ? "Normal" : p.bmi <= 29.9 ? "Fazla kilolu" : "Obez"}
+                  {p.bmiCategoryDescription ||
+                    (p.bmi < 18.5 ? "Düşük" : p.bmi <= 24.9 ? "Normal" : p.bmi <= 29.9 ? "Fazla kilolu" : "Obez")}
                 </p>
+                {p.isObese === true && (
+                  <p className="mt-1 text-xs font-medium text-amber-700">Obezite sınırı üzeri — hedef kiloya yönelik destek alın.</p>
+                )}
               </div>
             )}
             {p.bmr != null && (

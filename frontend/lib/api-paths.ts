@@ -1,134 +1,111 @@
 /**
- * Backend API path'leri — tek kaynak.
- * ABP conventional controller bu projede PascalCase route kullanıyor: /api/app/UserProfile/GetMyProfileAsync
- * Tüm apiFetch çağrıları bu sabitleri kullanmalı.
+ * Backend path'leri — `docs/openapi/swagger.web.v1.full.json` (kebab-case) ile birebir.
+ * Sorgu string'i için `lib/api.buildAbpQuery` kullan (PascalCase parametre isimleri).
  */
 
 const BASE = "/api/app";
 
-/** Controller ve action ile path: /api/app/{Controller}/{Action} (PascalCase — backend ile aynı) */
-export function apiPath(controller: string, action: string, query?: string): string {
-  const path = `${BASE}/${controller}/${action}`;
-  return query ? `${path}${query.startsWith("?") ? query : `?${query}`}` : path;
-}
-
-/** Sık kullanılan endpoint'ler — isimlendirme Swagger'daki path ile aynı */
 export const ApiPaths = {
-  // UserProfile — metod adları C# ile aynı (GetMyProfileAsync, UpdateMyProfileAsync)
   UserProfile: {
-    getMyProfile: () => apiPath("UserProfile", "GetMyProfileAsync"),
-    updateMyProfile: () => apiPath("UserProfile", "UpdateMyProfileAsync"),
+    myProfile: () => `${BASE}/user-profile/my-profile`,
   },
-  // Order
   Order: {
-    getAsync: (id: string) => apiPath("Order", "GetAsync", `id=${id}`),
-    getMyOrdersAsync: (query?: string) => apiPath("Order", "GetMyOrdersAsync") + (query ?? ""),
-    getTrainerOrdersAsync: (query?: string) => apiPath("Order", "GetTrainerOrdersAsync") + (query ?? ""),
-    getSessionsAsync: (orderId: string) => apiPath("Order", "GetSessionsAsync", `orderId=${orderId}`),
-    createAsync: () => apiPath("Order", "CreateAsync"),
-    updateStudentFormAsync: (id: string) => apiPath("Order", "UpdateStudentFormAsync", `id=${id}`),
-    updateOrderDeliveryAsync: (id: string) => apiPath("Order", "UpdateOrderDeliveryAsync", `id=${id}`),
+    getAsync: (id: string) => `${BASE}/order/${id}`,
+    getMyOrdersAsync: (query = "") => `${BASE}/order/my-orders${query}`,
+    getTrainerOrdersAsync: (query = "") => `${BASE}/order/trainer-orders${query}`,
+    getSessionsAsync: (orderId: string) => `${BASE}/order/sessions/${orderId}`,
+    createAsync: () => `${BASE}/order`,
+    updateStudentFormAsync: (orderId: string) => `${BASE}/order/student-form/${orderId}`,
+    updateOrderDeliveryAsync: (orderId: string) => `${BASE}/order/order-delivery/${orderId}`,
   },
-  // TrainerProfile
   TrainerProfile: {
-    getListAsync: (query?: string) => apiPath("TrainerProfile", "GetListAsync") + (query ?? ""),
-    getAsync: (id: string) => apiPath("TrainerProfile", "GetAsync", `id=${id}`),
-    getBySlugAsync: (slug: string) => apiPath("TrainerProfile", "GetBySlugAsync", `slug=${encodeURIComponent(slug)}`),
-    getMyProfileAsync: () => apiPath("TrainerProfile", "GetMyProfileAsync"),
-    updateAsync: (id: string) => apiPath("TrainerProfile", "UpdateAsync", `id=${id}`),
+    getListAsync: (query = "") => `${BASE}/trainer-profile${query}`,
+    getAsync: (id: string) => `${BASE}/trainer-profile/${id}`,
+    getBySlugAsync: (slug: string) => `${BASE}/trainer-profile/by-slug?slug=${encodeURIComponent(slug)}`,
+    getMyProfileAsync: () => `${BASE}/trainer-profile/my-profile`,
+    updateAsync: (id: string) => `${BASE}/trainer-profile/${id}`,
   },
-  // ServicePackage
   ServicePackage: {
-    getListAsync: (query?: string) => apiPath("ServicePackage", "GetListAsync") + (query ?? ""),
-    getAsync: (id: string) => apiPath("ServicePackage", "GetAsync", `id=${id}`),
-    createAsync: () => apiPath("ServicePackage", "CreateAsync"),
-    updateAsync: (id: string) => apiPath("ServicePackage", "UpdateAsync", `id=${id}`),
-    deleteAsync: (id: string) => apiPath("ServicePackage", "DeleteAsync", `id=${id}`),
+    getListAsync: (query = "") => `${BASE}/service-package${query}`,
+    getAsync: (id: string) => `${BASE}/service-package/${id}`,
+    createAsync: () => `${BASE}/service-package`,
+    updateAsync: (id: string) => `${BASE}/service-package/${id}`,
+    deleteAsync: (id: string) => `${BASE}/service-package/${id}`,
   },
-  // Category
+  Review: {
+    byTrainer: (query = "") => `${BASE}/review/by-trainer${query}`,
+  },
   Category: {
-    getAsync: (id: string) => apiPath("Category", "GetAsync", `id=${id}`),
-    getListAsync: () => apiPath("Category", "GetListAsync"),
-    getListByParentAsync: (parentId?: string) =>
-      apiPath("Category", "GetListByParentAsync", `parentId=${parentId ?? ""}`),
-    createAsync: () => apiPath("Category", "CreateAsync"),
-    updateAsync: (id: string) => apiPath("Category", "UpdateAsync", `id=${id}`),
-    deleteAsync: (id: string) => apiPath("Category", "DeleteAsync", `id=${id}`),
+    getAsync: (id: string) => `${BASE}/category/${id}`,
+    getListAsync: () => `${BASE}/category`,
+    getListByParentAsync: (parentId: string) => `${BASE}/category/by-parent/${parentId}`,
+    createAsync: () => `${BASE}/category`,
+    updateAsync: (id: string) => `${BASE}/category/${id}`,
+    deleteAsync: (id: string) => `${BASE}/category/${id}`,
   },
-  // Notification
   Notification: {
-    getMyNotificationsAsync: (query?: string) => apiPath("Notification", "GetMyNotificationsAsync") + (query ?? ""),
-    markAsReadAsync: (id: string) => apiPath("Notification", "MarkAsReadAsync", `id=${id}`),
-    markAllAsReadAsync: () => apiPath("Notification", "MarkAllAsReadAsync"),
+    getMyNotificationsAsync: (query = "") => `${BASE}/notification/my-notifications${query}`,
+    markAsReadAsync: (id: string) => `${BASE}/notification/${id}/mark-as-read`,
+    markAllAsReadAsync: () => `${BASE}/notification/mark-all-as-read`,
   },
-  // SupportTicket
   SupportTicket: {
-    getAsync: (id: string) => apiPath("SupportTicket", "GetAsync", `id=${id}`),
-    getMyTicketsAsync: (query?: string) => apiPath("SupportTicket", "GetMyTicketsAsync") + (query ?? ""),
-    getListAsync: (query?: string) => apiPath("SupportTicket", "GetListAsync") + (query ?? ""),
-    createAsync: () => apiPath("SupportTicket", "CreateAsync"),
-    replyAsync: (id: string) => apiPath("SupportTicket", "ReplyAsync", `id=${id}`),
+    getAsync: (id: string) => `${BASE}/support-ticket/${id}`,
+    getMyTicketsAsync: (query = "") => `${BASE}/support-ticket/my-tickets${query}`,
+    getListAsync: (query = "") => `${BASE}/support-ticket${query}`,
+    createAsync: () => `${BASE}/support-ticket`,
+    replyAsync: (id: string) => `${BASE}/support-ticket/${id}/reply`,
     updateStatusAsync: (id: string, status: number) =>
-      apiPath("SupportTicket", "UpdateStatusAsync", `id=${id}&status=${status}`),
+      `${BASE}/support-ticket/${id}/status?status=${encodeURIComponent(String(status))}`,
   },
-  // Messaging
   Messaging: {
-    getMyConversationsAsync: () => apiPath("Messaging", "GetMyConversationsAsync"),
-    getMessagesAsync: (conversationId: string, query?: string) =>
-      apiPath("Messaging", "GetMessagesAsync", `conversationId=${conversationId}`) +
-      (query ? (query.startsWith("?") ? `&${query.slice(1)}` : `&${query}`) : ""),
-    sendMessageAsync: () => apiPath("Messaging", "SendMessageAsync"),
-    markAsReadAsync: (conversationId: string) => apiPath("Messaging", "MarkAsReadAsync", `conversationId=${conversationId}`),
+    getMyConversationsAsync: () => `${BASE}/messaging/my-conversations`,
+    getMessagesAsync: (conversationId: string, query = "") =>
+      `${BASE}/messaging/messages/${conversationId}${query}`,
+    sendMessageAsync: () => `${BASE}/messaging/send-message`,
+    markAsReadAsync: (conversationId: string) => `${BASE}/messaging/mark-as-read/${conversationId}`,
     getOrCreateConversationForOrderAsync: (orderId: string) =>
-      apiPath("Messaging", "GetOrCreateConversationForOrderAsync", `orderId=${orderId}`),
+      `${BASE}/messaging/or-create-conversation-for-order/${orderId}`,
   },
-  // Wallet
   Wallet: {
-    getMyWalletAsync: () => apiPath("Wallet", "GetMyWalletAsync"),
-    getMyTransactionsAsync: (query?: string) => apiPath("Wallet", "GetMyTransactionsAsync") + (query ?? ""),
+    getMyWalletAsync: () => `${BASE}/wallet/my-wallet`,
+    getMyTransactionsAsync: (query = "") => `${BASE}/wallet/my-transactions${query}`,
   },
-  // WithdrawalRequest
   WithdrawalRequest: {
-    getMyRequestsAsync: (query?: string) => apiPath("WithdrawalRequest", "GetMyRequestsAsync") + (query ?? ""),
-    getListAsync: (query?: string) => apiPath("WithdrawalRequest", "GetListAsync") + (query ?? ""),
-    createAsync: () => apiPath("WithdrawalRequest", "CreateAsync"),
-    approveAsync: (id: string) => apiPath("WithdrawalRequest", "ApproveAsync", `id=${id}`),
-    rejectAsync: (id: string) => apiPath("WithdrawalRequest", "RejectAsync", `id=${id}`),
-    markProcessedAsync: (id: string) => apiPath("WithdrawalRequest", "MarkProcessedAsync", `id=${id}`),
+    getMyRequestsAsync: (query = "") => `${BASE}/withdrawal-request/my-requests${query}`,
+    getListAsync: (query = "") => `${BASE}/withdrawal-request${query}`,
+    createAsync: () => `${BASE}/withdrawal-request`,
+    approveAsync: (id: string) => `${BASE}/withdrawal-request/${id}/approve`,
+    rejectAsync: (id: string) => `${BASE}/withdrawal-request/${id}/reject`,
+    markProcessedAsync: (id: string) => `${BASE}/withdrawal-request/${id}/mark-processed`,
   },
-  // Admin
   Admin: {
-    getDashboardAsync: () => apiPath("Admin", "GetDashboardAsync"),
+    getDashboardAsync: () => `${BASE}/admin/dashboard`,
   },
-  // Subscription
   Subscription: {
-    getPlansAsync: () => apiPath("Subscription", "GetPlansAsync"),
-    createPlanAsync: () => apiPath("Subscription", "CreatePlanAsync"),
-    updatePlanAsync: (id: string) => apiPath("Subscription", "UpdatePlanAsync", `id=${id}`),
-    deletePlanAsync: (id: string) => apiPath("Subscription", "DeletePlanAsync", `id=${id}`),
+    getPlansAsync: () => `${BASE}/subscription/plans`,
+    createPlanAsync: () => `${BASE}/subscription/plan`,
+    updatePlanAsync: (id: string) => `${BASE}/subscription/${id}/plan`,
+    deletePlanAsync: (id: string) => `${BASE}/subscription/${id}/plan`,
   },
-  // Dispute
   Dispute: {
-    getAsync: (id: string) => apiPath("Dispute", "GetAsync", `id=${id}`),
-    getListAsync: (query?: string) => apiPath("Dispute", "GetListAsync") + (query ?? ""),
-    resolveAsync: (id: string) => apiPath("Dispute", "ResolveAsync", `id=${id}`),
+    getAsync: (id: string) => `${BASE}/dispute/${id}`,
+    getListAsync: (query = "") => `${BASE}/dispute${query}`,
+    resolveAsync: (id: string) => `${BASE}/dispute/${id}/resolve`,
   },
-  // FeaturedListing
   FeaturedListing: {
-    getAsync: (id: string) => apiPath("FeaturedListing", "GetAsync", `id=${id}`),
-    getListAsync: (query?: string) => apiPath("FeaturedListing", "GetListAsync") + (query ?? ""),
-    createAsync: () => apiPath("FeaturedListing", "CreateAsync"),
-    updateAsync: (id: string) => apiPath("FeaturedListing", "UpdateAsync", `id=${id}`),
-    deleteAsync: (id: string) => apiPath("FeaturedListing", "DeleteAsync", `id=${id}`),
+    getAsync: (id: string) => `${BASE}/featured-listing/${id}`,
+    getListAsync: (query = "") => `${BASE}/featured-listing${query}`,
+    createAsync: () => `${BASE}/featured-listing`,
+    updateAsync: (id: string) => `${BASE}/featured-listing/${id}`,
+    deleteAsync: (id: string) => `${BASE}/featured-listing/${id}`,
   },
-  // BlogPost
   BlogPost: {
-    getAsync: (id: string) => apiPath("BlogPost", "GetAsync", `id=${id}`),
-    getListAsync: (query?: string) => apiPath("BlogPost", "GetListAsync") + (query ?? ""),
-    getPublishedListAsync: (query?: string) => apiPath("BlogPost", "GetPublishedListAsync") + (query ?? ""),
-    createAsync: () => apiPath("BlogPost", "CreateAsync"),
-    updateAsync: (id: string) => apiPath("BlogPost", "UpdateAsync", `id=${id}`),
-    deleteAsync: (id: string) => apiPath("BlogPost", "DeleteAsync", `id=${id}`),
-    publishAsync: (id: string) => apiPath("BlogPost", "PublishAsync", `id=${id}`),
+    getAsync: (id: string) => `${BASE}/blog-post/${id}`,
+    getListAsync: (query = "") => `${BASE}/blog-post${query}`,
+    getPublishedListAsync: (query = "") => `${BASE}/blog-post/published-list${query}`,
+    createAsync: () => `${BASE}/blog-post`,
+    updateAsync: (id: string) => `${BASE}/blog-post/${id}`,
+    deleteAsync: (id: string) => `${BASE}/blog-post/${id}`,
+    publishAsync: (id: string) => `${BASE}/blog-post/${id}/publish`,
   },
 } as const;

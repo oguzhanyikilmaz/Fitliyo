@@ -11,6 +11,7 @@ using Fitliyo.Subscriptions;
 using Fitliyo.Support;
 using Fitliyo.Trainers;
 using Fitliyo.Profiles;
+using Fitliyo.Wellness;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp.AuditLogging.EntityFrameworkCore;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
@@ -64,6 +65,15 @@ public class FitliyoDbContext :
     public DbSet<Dispute> Disputes { get; set; }
     public DbSet<BlogPost> BlogPosts { get; set; }
     public DbSet<UserProfile> UserProfiles { get; set; }
+    public DbSet<UserNotificationPreferences> UserNotificationPreferences { get; set; }
+    public DbSet<PersonalWorkoutProgram> PersonalWorkoutPrograms { get; set; }
+    public DbSet<PersonalWorkoutTemplateExercise> PersonalWorkoutTemplateExercises { get; set; }
+    public DbSet<UserWorkoutLog> UserWorkoutLogs { get; set; }
+    public DbSet<UserWorkoutLogLine> UserWorkoutLogLines { get; set; }
+    public DbSet<PersonalNutritionPlan> PersonalNutritionPlans { get; set; }
+    public DbSet<UserFoodItem> UserFoodItems { get; set; }
+    public DbSet<UserDailyMealLog> UserDailyMealLogs { get; set; }
+    public DbSet<UserMealLogEntry> UserMealLogEntries { get; set; }
 
     #endregion
 

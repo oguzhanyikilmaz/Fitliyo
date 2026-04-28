@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Fitliyo.Domain\Fitliyo.Domain.csproj" />
+    <ProjectReference Include="..\Fitliyo.Domain.Shared\Fitliyo.Domain.Shared.csproj" />
     <ProjectReference Include="..\Fitliyo.Application.Contracts\Fitliyo.Application.Contracts.csproj" />
   </ItemGroup>
 

@@ -8,6 +8,7 @@ import { ApiPaths } from "@/lib/api-paths";
 import { isAuthenticated } from "@/lib/auth";
 import type { TrainerProfileDto } from "@/lib/types";
 import { TrainerPackageList } from "@/components/trainer/TrainerPackageList";
+import { TrainerReviewsSection } from "@/components/trainer/TrainerReviewsSection";
 
 const GUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -88,6 +89,13 @@ export default function TrainerProfileBySlugPage() {
       <div className="rounded-xl border bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-800">Paketler</h2>
         <TrainerPackageList trainerProfileId={trainer.id} isAuthenticated={isAuthenticated()} />
+      </div>
+
+      <div className="rounded-xl border bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-slate-800">Yorumlar</h2>
+        <div className="mt-2">
+          <TrainerReviewsSection trainerProfileId={trainer.id} />
+        </div>
       </div>
     </div>
   );

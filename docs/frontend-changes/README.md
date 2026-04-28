@@ -64,4 +64,5 @@ Aynı günde yeni giriş eklerken bu klasördeki dosyaları kontrol et:
 
 > Yeni girişler bu listenin **en üstüne** eklenir.
 
+- [2026-04-26-1 — Kullanıcı wellness (beslenme, antrenman, tercihler)](2026-04-26-1.md)
 

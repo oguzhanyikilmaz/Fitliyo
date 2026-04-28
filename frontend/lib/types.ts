@@ -1,6 +1,6 @@
 /**
  * Backend DTO'larına uyumlu TypeScript tipleri.
- * API path'leri tek kaynak: lib/api-paths.ts (Swagger ile uyumlu kebab-case: /api/app/order/get-my-orders-async).
+ * API path'leri: lib/api-paths.ts — değişiklik öncesi `docs/openapi/swagger.web.v1.full.json` (backend repo) doğrulanır.
  */
 
 /** Sayfalı sonuç (ABP PagedResultDto) */
@@ -241,6 +241,28 @@ export interface CreateUpdateServicePackageDto {
   tags?: string | null;
 }
 
+/** Yorum listesi isteği (GetReviewListDto) */
+export interface GetReviewListDto extends PagedAndSortedRequest {
+  trainerProfileId?: string;
+  minRating?: number;
+}
+
+/** Yorum (görüntüleme) */
+export interface ReviewDto {
+  id: string;
+  orderId: string;
+  studentId: string;
+  trainerProfileId: string;
+  rating: number;
+  comment?: string | null;
+  trainerReply?: string | null;
+  trainerReplyDate?: string | null;
+  isHidden: boolean;
+  creationTime: string;
+  studentFullName?: string | null;
+  trainerFullName?: string | null;
+}
+
 /** Mesajlaşma */
 export interface ListResultDto<T> {
   items: T[];
@@ -350,6 +372,12 @@ export interface UserProfileDto {
   idealWeightMaxKg?: number | null;
   /** Hesaplanan: vücut yağ % (Navy) */
   bodyFatPercentage?: number | null;
+  /** VKİ sınıfı (enum) */
+  bmiCategory?: number | null;
+  /** VKİ açıklaması (Türkçe) */
+  bmiCategoryDescription?: string | null;
+  /** Obezite eşiği (VKİ) */
+  isObese?: boolean | null;
 }
 
 export interface CreateUpdateUserProfileDto {

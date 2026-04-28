@@ -35,6 +35,9 @@ class Program
 
     public static IHostBuilder CreateHostBuilder(string[] args) =>
         Host.CreateDefaultBuilder(args)
+            // dotnet run proje dışı klasörde çalıştırıldığında (örn. repo kökü) CWD
+            // appsettings içermez; yapılandırma çıkış (bin) klasöründen yüklensin.
+            .UseContentRoot(AppContext.BaseDirectory)
             .AddAppSettingsSecretsJson()
             .ConfigureLogging((context, logging) => logging.ClearProviders())
             .ConfigureServices((hostContext, services) =>

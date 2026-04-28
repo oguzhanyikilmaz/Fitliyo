@@ -49,4 +49,13 @@ public class UserProfileDto : EntityDto<Guid>
     public decimal? IdealWeightMaxKg { get; set; }
     /// <summary>Vücut yağ yüzdesi (Navy formülü, varsa)</summary>
     public decimal? BodyFatPercentage { get; set; }
+
+    /// <summary>WHO sınıfı (VKİ’den)</summary>
+    public BmiCategory BmiCategory { get; set; }
+
+    /// <summary>VKİ sınıfı açıklaması (Türkçe, hesaplanan)</summary>
+    public string? BmiCategoryDescription { get; set; }
+
+    /// <summary>Obezite (sınıf I ve üzeri) — sadece bilgilendirme</summary>
+    public bool? IsObese { get; set; }
 }

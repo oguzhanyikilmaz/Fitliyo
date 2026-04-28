@@ -1,5 +1,50 @@
 # Fitliyo Changelog
 
+## 2026-04-26 - Frontend Faz 1: keşif, yorumlar, öğrenci dashboard
+
+- **`buildQuery`:** Tüm sorgu anahtarları ABP için PascalCase’e dönüştürülüyor (`skipCount` → `SkipCount`).
+- **Eğitmen listesi:** Filtre (arama, şehir, online/yüz yüze, doğrulanmış), sıralama, sayfalama; min. puan (sayfa içi); kategori seçimi (backend join gelene kadar bilgi notu).
+- **Eğitmen detay:** Sayfalı yorumlar (`/api/app/review/by-trainer`), `TrainerReviewsSection`.
+- **Paket keşfi:** `/packages` — fiyat, tip, online/yüz yüze, kategori, sayfalama.
+- **Öğrenci dashboard:** Tüm (ilk 10) sipariş için seanslar birleştirilip yaklaşan seanslar listelenir.
+- **Düzeltme:** `SupportTicket.updateStatusAsync` ikinci argüman (durum) desteklendi; admin build hatası giderildi.
+
+---
+
+## 2026-04-26 - Frontend: Swagger uyumlu profil API + auth sertleştirme
+
+- **api-paths:** `UserProfile` artık Swagger’daki `GET/PUT /api/app/user-profile/my-profile` (önceki PascalCase yolu hatalıydı).
+- **auth / api:** JWT `exp` kontrolü, ABP hata gövdesi (`error.message`) ayrıştırma, kilitli `apiFetch` akışı.
+- **UI:** Öğrenci paneli sidebar ve profil metrikleri (VKİ açıklaması / `isObese`) güncellendi; Header oturum senkronu.
+- **Kurallar:** `.cursor/rules/frontend-fitliyo.mdc` eklendi; `frontend/README.md` API tek kaynak notu.
+
+---
+
+## 2026-04-26 - OpenAPI snapshot: `--generate-swagger` + Web derleme çıktısı
+
+- **`--generate-swagger`:** Dokümantasyondaki komut artık `Program.cs` içinde uygulanıyor; `ISwaggerProvider` ile `docs/openapi/swagger.web.v1.full.json` (göreli yol depo köküne göre) üretilip işlem çıkıyor, Kestrel açık kalmıyor.
+- **Fitliyo.Web.csproj:** Özel `BaseOutputPath` / `BaseIntermediateOutputPath` kaldırıldı; iç içe `bin/Debug/net9.0` ve `path too long` derleme hatası giderildi.
+
+---
+
+## 2026-04-26 - DbMigrator: appsettings yükleme (CWD) düzeltmesi
+
+- **Sorun:** `dotnet run --project` repo kökünden çalıştırıldığında `Host` içerik kökü `CWD` olduğundan `ConnectionStrings:Default` boş kalıyor, Npgsql "ConnectionString not initialized" veriyordu.
+- **Çözüm:** `UseContentRoot(AppContext.BaseDirectory)` — yapılandırma `bin/...` altındaki kopya `appsettings` dosyalarından yüklenir. `appsettings.Development.json` çıktıya kopyalanacak şekilde csproj güncellendi.
+
+---
+
+## 2026-04-26 - Kullanıcı wellness modülü (beslenme, antrenman, bildirim tercihleri)
+
+- **Amaç:** PT olmadan da kullanıcının kendi antrenman/beslenme programını, günlük öğün ve antrenman kayıtlarını ve bildirim tercihlerini yönetmesi; VKİ sınıfı (obezite dâhil) ve MET tabanlı kcal hesapları.
+- **Yeni API grupları:** Bildirim tercihleri, kişisel antrenman programı (şablon hareketleri), antrenman günlüğü, beslenme planı, kullanıcı gıda kataloğu, günlük öğün kaydı, gün sonu özet.
+- **Profil DTO genişletmesi:** `UserProfileDto` içine `BmiCategory`, `BmiCategoryDescription`, `IsObese` (hesaplanan) eklendi.
+- **EF:** `AddWellnessUserProgramsAndLogs` migration; DbMigrator’da `Microsoft.EntityFrameworkCore.Design` (migration araçları için) eklendi.
+- **Test:** `WellnessMetabolicMath` birim testleri (Domain.Tests).
+- **Not:** Yeni endpoint’ler için `docs/openapi` snapshot ve AppService dokümantasyonu commit öncesi yenilenmelidir.
+
+---
+
 ## 2026-04-25 - ABP Web ana sayfa dashboard'a dönüştürüldü
 
 - **Hedef:** Sol paneldeki ana sayfa, yönetim odaklı metrik dashboard olarak yeniden tasarlandı.

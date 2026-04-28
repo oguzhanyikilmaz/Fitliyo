@@ -25,6 +25,8 @@ using Fitliyo.Trainers;
 using Fitliyo.Trainers.Dtos;
 using Fitliyo.Profiles;
 using Fitliyo.Profiles.Dtos;
+using Fitliyo.Wellness;
+using Fitliyo.Wellness.Dtos;
 
 namespace Fitliyo;
 
@@ -54,5 +56,20 @@ public class FitliyoApplicationAutoMapperProfile : Profile
         CreateMap<Dispute, DisputeDto>();
         CreateMap<BlogPost, BlogPostDto>();
         CreateMap<UserProfile, UserProfileDto>();
+        CreateMap<UserNotificationPreferences, UserNotificationPreferencesDto>();
+        CreateMap<PersonalWorkoutProgram, PersonalWorkoutProgramDto>()
+            .ForMember(d => d.Exercises, o => o.Ignore());
+        CreateMap<PersonalWorkoutTemplateExercise, PersonalWorkoutTemplateExerciseDto>();
+        CreateMap<UserWorkoutLog, UserWorkoutLogDto>().ForMember(d => d.Lines, o => o.Ignore());
+        CreateMap<UserWorkoutLogLine, UserWorkoutLogLineDto>();
+        CreateMap<PersonalNutritionPlan, PersonalNutritionPlanDto>();
+        CreateMap<UserFoodItem, UserFoodItemDto>();
+        CreateMap<UserDailyMealLog, UserDailyMealLogDto>()
+            .ForMember(d => d.Entries, o => o.Ignore())
+            .ForMember(d => d.TotalCalories, o => o.Ignore())
+            .ForMember(d => d.TotalProteinG, o => o.Ignore())
+            .ForMember(d => d.TotalCarbsG, o => o.Ignore())
+            .ForMember(d => d.TotalFatG, o => o.Ignore());
+        CreateMap<UserMealLogEntry, UserMealLogEntryDto>();
     }
 }
